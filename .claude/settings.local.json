@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 /Users/atsuyasato/AItest/slack/bot.py)",
+      "mcp__hr-support__update_notion_page",
+      "mcp__hr-support__read_notion_page",
+      "mcp__hr-support__search_notion",
+      "mcp__hr-support__create_notion_page"
+    ]
+  }
+}

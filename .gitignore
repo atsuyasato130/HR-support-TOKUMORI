@@ -1,0 +1,27 @@
+# Secrets
+business/career_advisor/config/.env
+business/career_advisor/config/credentials.json
+business/career_advisor/config/token.json
+business/career_advisor/config/processed_email_ids.json
+
+# Logs
+business/career_advisor/logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+.vercel/
+
+# macOS
+.DS_Store
+
+# Private
+private/
