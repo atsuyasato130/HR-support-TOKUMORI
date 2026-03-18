@@ -1,7 +1,7 @@
 # architecture_master.md — 帝国の設計書（最上位行動指針）
 
 > **この文書はすべての作業の前に参照せよ。コード変更・エージェント追加・設定変更のたびに必ず更新せよ。**
-> 最終更新: 2026-03-17
+> 最終更新: 2026-03-18
 
 ---
 
@@ -21,6 +21,63 @@
 cd "/Users/atsuyasato/Claude AI/AI agent（HRsupport事業）/business/career_advisor"
 python3 main.py
 ```
+
+---
+
+## 0.5 Micro-Workers アーキテクチャ（2026-03-18 追加）
+
+### 設計思想
+
+100エージェント体制を支えるための**分業型アーキテクチャ**。
+コンテキスト消費を最小化し、各ワーカーは単一責務のみを持つ。
+
+### 4ロール定義
+
+| ロール | 兵種 | 責務 | LLM | ファイル |
+|--------|------|------|-----|---------|
+| WATCHER | 哨戒兵 | 外部変更を検知しIDのみ出力 | ✗ | `workers/notion_watcher.py` |
+| PARSER | 選別兵 | 生データから最小フィールド抽出 | ✗ | `workers/notion_page_parser.py` |
+| PROCESSOR | 策士兵 | マッピング・推論・命令生成 | △ | `workers/sf_field_mapper.py` |
+| EXECUTOR | 突撃兵 | API書き込みのみ（ロジックなし） | ✗ | `workers/sf_bulk_executor.py` |
+
+### Stateless Handover（バケツリレー）原則
+
+```
+[WATCHER]              [PARSER]              [PROCESSOR]           [EXECUTOR]
+notion_watcher.py  →  notion_page_parser.py  →  sf_field_mapper.py  →  sf_bulk_executor.py
+       ↓                      ↓                        ↓                      ↓
+ state/watcher_queue  →  state/parser_queue  →  state/processor_queue  →  state/executor_results
+（notion_page_id のみ）  （抽出フィールドJSON）    （SF更新命令JSON）         （実行結果JSON）
+```
+
+- **禁止**: エージェント間で生テキスト・APIレスポンス全体を渡すこと
+- **許可**: IDと最小限のJSON（100行以内）のみをステートファイル経由で渡す
+- ステートファイル場所: `business/career_advisor/state/`
+
+### パイプライン一括実行
+
+```bash
+# Notion変更をSFに全同期
+python3 agents/workers/sf_bulk_executor.py --run-pipeline --full-scan
+
+# 差分のみ（前回実行以降）
+python3 agents/workers/sf_bulk_executor.py --run-pipeline
+
+# dry-run確認
+python3 agents/workers/sf_bulk_executor.py --run-pipeline --dry-run
+```
+
+### 既存エージェントとの関係
+
+```
+agents/              ← 既存モノリシックエージェント（対話CLIとして継続稼働）
+agents/workers/      ← Micro-Workers（バッチ処理・自動化に特化）
+agents/base_agent.py ← 既存エージェントの親クラス（PII検知・ノウハウ保存）
+agents/base_worker.py← Micro-Workerの親クラス（4ロール定義・StateManager連携）
+```
+
+既存エージェントはモノリシック構造のまま残す。
+`workers/` は非対話バッチ処理専用。将来的には既存エージェントも段階的に分解可能。
 
 ---
 
