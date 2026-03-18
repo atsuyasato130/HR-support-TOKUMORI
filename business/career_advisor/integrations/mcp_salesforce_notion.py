@@ -190,22 +190,13 @@ def _notion_read_db(database_id: str, filter_json: str = "{}") -> str:
     if not os.environ.get("NOTION_API_KEY"):
         return "NOTION_API_KEY が未設定です。"
     try:
-        import httpx as _httpx
-        headers = {
-            "Authorization": f"Bearer {os.environ['NOTION_API_KEY']}",
-            "Notion-Version": "2022-06-28",
-            "Content-Type": "application/json",
-        }
-        payload: dict = {"page_size": 30}
+        notion = _get_notion()
+        payload: dict = {"database_id": database_id, "page_size": 30}
         filt = json.loads(filter_json)
         if filt:
             payload["filter"] = filt
-        r = _httpx.post(
-            f"https://api.notion.so/v1/databases/{database_id}/query",
-            headers=headers, json=payload, timeout=15
-        )
-        r.raise_for_status()
-        pages = r.json().get("results", [])
+        result = notion.databases.query(**payload)
+        pages = result.get("results", [])
         if not pages:
             return "レコードが見つかりませんでした。"
         rows = []
@@ -269,25 +260,60 @@ def _notion_archive_page(page_id: str) -> str:
         return f"Notion アーカイブエラー: {exc}"
 
 
-def _notion_create_page(database_id: str, properties_json: str, content: str = "") -> str:
+def _notion_create_page(
+    database_id: str,
+    properties_json: str,
+    content: str = "",
+    template_id: str = "",
+    blocks_json: str = "",
+) -> str:
     if not os.environ.get("NOTION_API_KEY"):
         return "NOTION_API_KEY が未設定です。"
     try:
         notion = _get_notion()
         props = json.loads(properties_json)
         body: dict = {"parent": {"database_id": database_id}, "properties": props}
-        if content:
-            body["children"] = [
-                {
+        children: list = []
+
+        # テンプレートのブロック構造を複製
+        if template_id:
+            _STRIP = {
+                "id", "created_time", "last_edited_time", "created_by",
+                "last_edited_by", "has_children", "archived", "parent",
+            }
+            tmpl = notion.blocks.children.list(block_id=template_id, page_size=100)
+            for b in tmpl.get("results", []):
+                children.append({k: v for k, v in b.items() if k not in _STRIP})
+
+        # blocks_json が指定された場合（template_id より優先）
+        if blocks_json:
+            children = json.loads(blocks_json)
+
+        # テキストコンテンツを 2000 文字チャンクに分割して paragraph ブロックに変換
+        if content and not children:
+            for i in range(0, len(content), 2000):
+                children.append({
                     "object": "block",
                     "type": "paragraph",
                     "paragraph": {
-                        "rich_text": [{"type": "text", "text": {"content": content[:2000]}}]
+                        "rich_text": [{"type": "text", "text": {"content": content[i:i + 2000]}}]
                     },
-                }
-            ]
+                })
+
+        if children:
+            body["children"] = children[:100]
+
         page = notion.pages.create(**body)
-        return f"Notion ページを作成しました。\nURL: {page.get('url', '')}\nID: {page['id']}"
+        page_id = page["id"]
+
+        # 100 件超のブロックを追記
+        if len(children) > 100:
+            for i in range(100, len(children), 100):
+                notion.blocks.children.append(
+                    block_id=page_id, children=children[i:i + 100]
+                )
+
+        return f"Notion ページを作成しました。\nURL: {page.get('url', '')}\nID: {page_id}"
     except Exception as exc:
         return f"Notion エラー: {exc}"
 
@@ -314,22 +340,32 @@ def _notion_create_child_page(parent_page_id: str, title: str, blocks_json: str 
         # Append remaining blocks
         remaining = blocks[100:]
         if remaining:
-            import httpx
-            token = os.environ["NOTION_API_KEY"]
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Notion-Version": "2022-06-28",
-                "Content-Type": "application/json",
-            }
             for i in range(0, len(remaining), 100):
-                batch = remaining[i:i + 100]
-                httpx.patch(
-                    f"https://api.notion.com/v1/blocks/{page_id}/children",
-                    headers=headers,
-                    json={"children": batch},
-                    timeout=30,
+                notion.blocks.children.append(
+                    block_id=page_id, children=remaining[i:i + 100]
                 )
         return f"Notion 子ページを作成しました。\nURL: {page.get('url', '')}\nID: {page_id}"
+    except Exception as exc:
+        return f"Notion エラー: {exc}"
+
+
+def _notion_get_users() -> str:
+    """Notion ワークスペースのメンバー一覧を取得する（参加者 people 型プロパティ用）"""
+    if not os.environ.get("NOTION_API_KEY"):
+        return "NOTION_API_KEY が未設定です。"
+    try:
+        notion = _get_notion()
+        result = notion.users.list()
+        users = result.get("results", [])
+        if not users:
+            return "ユーザーが見つかりませんでした。"
+        rows = []
+        for u in users:
+            name = u.get("name", "（名前なし）")
+            uid = u.get("id", "")
+            utype = u.get("type", "")
+            rows.append(f"{name}  ID: {uid}  type: {utype}")
+        return f"{len(users)} 件:\n" + "\n".join(rows)
     except Exception as exc:
         return f"Notion エラー: {exc}"
 
@@ -826,9 +862,20 @@ TOOLS = [
             "properties": {
                 "database_id": {"type": "string", "description": "親データベース ID"},
                 "properties_json": {"type": "string", "description": "プロパティの JSON。例: '{\"名前\": {\"title\": [{\"text\": {\"content\": \"田中太郎\"}}]}}'"},
-                "content": {"type": "string", "description": "ページ本文テキスト（省略可）"},
+                "content": {"type": "string", "description": "ページ本文テキスト（省略可）。2000文字超は自動分割される"},
+                "template_id": {"type": "string", "description": "テンプレートページ ID（省略可）。指定するとテンプレートのブロック構造を複製して作成する"},
+                "blocks_json": {"type": "string", "description": "Notion ブロック配列の JSON（省略可）。content より優先。100件超も自動追記される"},
             },
             "required": ["database_id", "properties_json"],
+        },
+    },
+    {
+        "name": "get_notion_users",
+        "description": "Notion ワークスペースのメンバー一覧を取得する。参加者プロパティを people 型で設定するためのユーザー ID を確認できる",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
         },
     },
     {
@@ -1055,7 +1102,11 @@ def _handle_tool(name: str, args: dict) -> str:
             args["database_id"],
             args["properties_json"],
             args.get("content", ""),
+            args.get("template_id", ""),
+            args.get("blocks_json", ""),
         )
+    elif name == "get_notion_users":
+        return _notion_get_users()
     elif name == "archive_notion_page":
         return _notion_archive_page(args["page_id"])
     elif name == "update_notion_page":

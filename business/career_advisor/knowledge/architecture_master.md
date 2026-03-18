@@ -1,7 +1,7 @@
 # architecture_master.md — 帝国の設計書（最上位行動指針）
 
 > **この文書はすべての作業の前に参照せよ。コード変更・エージェント追加・設定変更のたびに必ず更新せよ。**
-> 最終更新: 2026-03-18
+> 最終更新: 2026-03-18 (100+ Agent Governance 追加)
 
 ---
 
@@ -81,6 +81,78 @@ agents/base_worker.py← Micro-Workerの親クラス（4ロール定義・StateM
 
 ---
 
+## 0.6 100+ Agent Governance（2026-03-18 追加）
+
+### 目的
+
+エージェント数が100を超えても無秩序にならないよう、命名・登録・共通化の3ルールを強制する。
+
+### ディレクトリ構成（Governance 追加後）
+
+```
+business/
+├── agents/
+│   ├── registry.json          ← ★ 統合レジストリ（全エージェントの単一ソース）
+│   ├── _registry_schema.json  ← JSONSchema バリデーション定義
+│   └── name_validator.py      ← 命名規則チェッカー（新エージェント追加時に実行）
+├── lib/
+│   ├── __init__.py
+│   ├── api_clients.py         ← Notion / SF / Slack / Anthropic 薄いラッパー
+│   ├── validators.py          ← ピックリスト・フィールド値バリデーション
+│   ├── state_io.py            ← state/ ファイル読み書き統一 API
+│   └── registry_loader.py     ← registry.json ロード・検索・重複チェック
+└── career_advisor/            ← 既存エージェント本体（変更なし）
+    └── knowledge/
+        └── AGENT_MANIFEST.json ← v2.0: canonical_id 追加・registry.json へ参照
+```
+
+### 命名規則 — `[Domain]_[Role]_[Target]`
+
+| ロール | 意味 | 例 |
+|--------|------|----|
+| `watcher` | 外部変更検知のみ・LLM不使用 | `hr_watcher_notion_company` |
+| `parser` | 最小フィールド抽出・LLM不使用 | `hr_parser_notion_page` |
+| `processor` | 推論・マッピング・LLM可 | `hr_processor_sf_mapper` |
+| `executor` | API書き込みのみ・ロジックなし | `hr_executor_sf_bulk` |
+| `orchestrator` | 複数Workerを束ねる制御 | `hr_orchestrator_post_interview` |
+
+### Iron Rules（絶対守護原則）
+
+1. **registry.json 未登録のエージェントを本番稼働させてはならない**
+2. **新エージェント作成前に `name_validator.py --check` を実行し、重複検証を必ず行う**
+3. **Worker 内に API通信・バリデーション・状態読み書きロジックを直書きしない → `business/lib/` を使う**
+4. **`business/lib/` モジュールを worker から `from business.lib.xxx import yyy` で参照する**
+
+### 新エージェント追加フロー
+
+```bash
+# 1. 命名チェック（重複・規則違反を検出）
+python3 business/agents/name_validator.py --check hr_executor_new_target
+
+# 2. registry.json に追記（必須フィールド: id / domain / role / target / canonical_name / ...）
+# → _registry_schema.json に従うこと
+
+# 3. 全件再検証
+python3 business/agents/name_validator.py --check-all
+
+# 4. knowledge/AGENT_MANIFEST.json に canonical_id を追記
+# 5. architecture_master.md §0.6 のエージェント数を更新
+# 6. スプレッドシート Agent_Registry タブを更新
+```
+
+### 現在の登録状況（2026-03-18 時点）
+
+| ロール | 件数 | エージェント |
+|--------|------|------------|
+| watcher | 2 | hr_watcher_notion_company, hr_watcher_tldv |
+| parser | 2 | hr_parser_notion_page, hr_parser_notion |
+| processor | 4 | hr_processor_sf_mapper, hr_processor_coaching, hr_processor_report, hr_processor_supporter, hr_processor_interview |
+| executor | 4 | hr_executor_sf_bulk, hr_executor_salesforce, hr_executor_slack, hr_executor_line, hr_executor_google |
+| orchestrator | 1 | hr_orchestrator_post_interview |
+| **合計** | **15** | |
+
+---
+
 ## 1. アーキテクチャ原則
 
 ### 自然言語ルーティング（main.py）
@@ -96,9 +168,11 @@ AGENT_REGISTRY から対象エージェントを起動
 連鎖実行: tldv → salesforce → slack 等
 ```
 
-**エージェント追加手順（2ステップ）:**
-1. `main.py` の `AGENT_REGISTRY` に1行追記
-2. `supporter_agent.py` の `SYSTEM_KNOWLEDGE` を更新
+**エージェント追加手順（Governance版・4ステップ）:**
+1. `business/agents/name_validator.py --check [canonical_name]` で命名・重複チェック
+2. `business/agents/registry.json` に登録
+3. `main.py` の `AGENT_REGISTRY` に1行追記
+4. `supporter_agent.py` の `SYSTEM_KNOWLEDGE` を更新
 
 ### domain_hr.json — 業界転用の鍵
 

@@ -1,10 +1,14 @@
 {
-  "version": "1.1",
-  "updated": "2026-03-13",
+  "version": "2.0",
+  "updated": "2026-03-18",
   "description": "HR支援AIエージェントシステム — エージェントカタログ（正規登録台帳）",
+  "notice": "v2.0 より統合レジストリ business/agents/registry.json に移行。このファイルはキャリアアドバイザー内部の後方互換参照用。新エージェント追加は registry.json へ。",
+  "registry_path": "../../agents/registry.json",
+  "naming_rule": "[Domain]_[Role]_[Target]  例: hr_executor_sf_bulk",
   "agents": [
     {
       "key": "coaching",
+      "canonical_id": "hr_processor_coaching",
       "name": "学生コーチング",
       "module": "coaching_agent",
       "desc": "ES・面接対策 / 就活軸深掘り",
@@ -19,6 +23,7 @@
     },
     {
       "key": "salesforce",
+      "canonical_id": "hr_executor_salesforce",
       "name": "Salesforce",
       "module": "salesforce_agent",
       "desc": "tldv議事録 → SF登録・更新",
@@ -35,6 +40,7 @@
     },
     {
       "key": "notion",
+      "canonical_id": "hr_parser_notion",
       "name": "Notion",
       "module": "notion_agent",
       "desc": "企業DB・企業紹介文生成",
@@ -49,6 +55,7 @@
     },
     {
       "key": "slack",
+      "canonical_id": "hr_executor_slack",
       "name": "Slack",
       "module": "slack_agent",
       "desc": "選考進捗Slack共有",
@@ -63,6 +70,7 @@
     },
     {
       "key": "line",
+      "canonical_id": "hr_executor_line",
       "name": "LINE",
       "module": "line_agent",
       "desc": "Lステップ文章生成 / 企業紹介文",
@@ -77,6 +85,7 @@
     },
     {
       "key": "tldv",
+      "canonical_id": "hr_watcher_tldv",
       "name": "tldv",
       "module": "tldv_agent",
       "desc": "議事録取得・Claude分析",
@@ -91,6 +100,7 @@
     },
     {
       "key": "report",
+      "canonical_id": "hr_processor_report",
       "name": "レポート",
       "module": "report_agent",
       "desc": "学生所感レポート生成",
@@ -105,6 +115,7 @@
     },
     {
       "key": "google",
+      "canonical_id": "hr_executor_google",
       "name": "Google",
       "module": "google_agent",
       "desc": "Gmail・Sheets・Docs",
@@ -119,6 +130,7 @@
     },
     {
       "key": "supporter",
+      "canonical_id": "hr_processor_supporter",
       "name": "サポーター",
       "module": "supporter_agent",
       "desc": "使い方・システムガイド",
@@ -133,6 +145,7 @@
     },
     {
       "key": "post_interview_full_support",
+      "canonical_id": "hr_orchestrator_post_interview",
       "name": "面談後フルサポート",
       "module": "post_interview_full_support_agent",
       "desc": "tldv議事録 → SF登録 → LINE下書き → 所感レポート → ノウハウ蓄積（ワンストップ）",
@@ -145,6 +158,81 @@
         "BaseAgentのノウハウ蓄積機能でインサイトをアーカイブ"
       ],
       "apis": ["anthropic", "salesforce", "google_sheets"],
+      "inherits_base": true,
+      "status": "active"
+    },
+    {
+      "key": "interview_master",
+      "canonical_id": "hr_processor_interview",
+      "name": "面接マスター",
+      "module": "interview_master_agent",
+      "desc": "面接対策マスター。志望動機・ガクチカ・逆質問など全シーンカバー",
+      "responsibilities": [
+        "志望動機・ガクチカ・強み弱み・逆質問の対策",
+        "企業別カスタマイズ面接質問生成",
+        "模擬面接フィードバック"
+      ],
+      "apis": ["anthropic"],
+      "inherits_base": false,
+      "status": "active"
+    },
+    {
+      "key": "notion_watcher",
+      "canonical_id": "hr_watcher_notion_company",
+      "name": "Notion企業DBウォッチャー",
+      "module": "agents/workers/notion_watcher",
+      "desc": "Notion企業DBを定期ポーリング、変更ページIDのみをstateに書き込む（WATCHER）",
+      "responsibilities": [
+        "Notion DB差分検知（新規・更新ページ）",
+        "state/watcher_queue.json への ID書き込み",
+        "LLM不使用・常駐監視対応"
+      ],
+      "apis": ["notion"],
+      "inherits_base": true,
+      "status": "active"
+    },
+    {
+      "key": "notion_page_parser",
+      "canonical_id": "hr_parser_notion_page",
+      "name": "Notionページパーサー",
+      "module": "agents/workers/notion_page_parser",
+      "desc": "watcher_queueからIDを読みNotionページを取得、最小フィールドを抽出（PARSER）",
+      "responsibilities": [
+        "Notionページ取得・最小フィールド抽出",
+        "ピックリスト値バリデーション",
+        "state/parser_queue.json への書き込み"
+      ],
+      "apis": ["notion"],
+      "inherits_base": true,
+      "status": "active"
+    },
+    {
+      "key": "sf_field_mapper",
+      "canonical_id": "hr_processor_sf_mapper",
+      "name": "SFフィールドマッパー",
+      "module": "agents/workers/sf_field_mapper",
+      "desc": "Notion→SFフィールド名マッピング・Account ID解決・実行命令生成（PROCESSOR）",
+      "responsibilities": [
+        "Notion→SFフィールド名変換（静的定義）",
+        "SF Account ID名前マッチング",
+        "state/processor_queue.json への書き込み"
+      ],
+      "apis": ["salesforce"],
+      "inherits_base": true,
+      "status": "active"
+    },
+    {
+      "key": "sf_bulk_executor",
+      "canonical_id": "hr_executor_sf_bulk",
+      "name": "SF一括書き込みエグゼキューター",
+      "module": "agents/workers/sf_bulk_executor",
+      "desc": "processor_queueのSF更新命令をSalesforceに一括書き込む（EXECUTOR）",
+      "responsibilities": [
+        "SF Account 一括更新（必須フィールドパターン自動付与）",
+        "requires_manual=true のスキップ",
+        "state/executor_results.json への結果記録"
+      ],
+      "apis": ["salesforce"],
       "inherits_base": true,
       "status": "active"
     }

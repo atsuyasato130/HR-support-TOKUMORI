@@ -1,0 +1,341 @@
+{
+  "$schema": "./_registry_schema.json",
+  "version": "2.0",
+  "updated": "2026-03-18",
+  "description": "100+ Agent Governance — 全エージェント統合レジストリ。新エージェント追加時は必ずここに登録し、重複チェックを行うこと。",
+  "naming_rule": "[Domain]_[Role]_[Target]  例: hr_executor_sf_bulk",
+  "domains": {
+    "hr": "HRサポート事業（TOKUMORI）"
+  },
+  "roles": {
+    "watcher":      "外部変更検知のみ。LLM不使用。IDをstateに書き込む",
+    "parser":       "最小フィールド抽出。LLM不使用。コンパクトJSONを出力",
+    "processor":    "推論・マッピング・LLM呼び出し。実行命令を生成",
+    "executor":     "API書き込みのみ。ロジックなし",
+    "orchestrator": "複数Workerを束ねるパイプライン制御"
+  },
+  "agents": [
+    {
+      "id": "hr_watcher_notion_company",
+      "domain": "hr",
+      "role": "watcher",
+      "target": "notion_company",
+      "canonical_name": "hr_watcher_notion_company",
+      "legacy_module": "agents/workers/notion_watcher.py",
+      "description": "Notion企業DBを定期ポーリングし、新規・更新ページのIDのみをstateに書き込む",
+      "input": {
+        "type": "none",
+        "source": "Notion Database API (polling)"
+      },
+      "output": {
+        "type": "state_file",
+        "path": "state/watcher_queue.json",
+        "schema": "[{notion_page_id, name, last_edited_time}]"
+      },
+      "dependencies": ["notion_api"],
+      "llm_required": false,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_parser_notion_page",
+      "domain": "hr",
+      "role": "parser",
+      "target": "notion_page",
+      "canonical_name": "hr_parser_notion_page",
+      "legacy_module": "agents/workers/notion_page_parser.py",
+      "description": "watcher_queueからIDを読み込みNotionページを取得、最小限フィールドのみを抽出",
+      "input": {
+        "type": "state_file",
+        "path": "state/watcher_queue.json",
+        "schema": "[{notion_page_id, name, last_edited_time}]"
+      },
+      "output": {
+        "type": "state_file",
+        "path": "state/parser_queue.json",
+        "schema": "[{notion_page_id, name, extracted:{selection_flow, description, strength_offer_point, ...}}]"
+      },
+      "dependencies": ["notion_api"],
+      "llm_required": false,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_processor_sf_mapper",
+      "domain": "hr",
+      "role": "processor",
+      "target": "sf_mapper",
+      "canonical_name": "hr_processor_sf_mapper",
+      "legacy_module": "agents/workers/sf_field_mapper.py",
+      "description": "parser_queueのNotionデータをSFフィールド名にマッピングし、Account IDを解決して実行命令を生成",
+      "input": {
+        "type": "state_file",
+        "path": "state/parser_queue.json",
+        "schema": "[{notion_page_id, name, extracted:{...}}]"
+      },
+      "output": {
+        "type": "state_file",
+        "path": "state/processor_queue.json",
+        "schema": "[{sf_account_id, sf_name, update_fields:{...}, requires_manual, skip_reason}]"
+      },
+      "dependencies": ["salesforce_api"],
+      "llm_required": false,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_executor_sf_bulk",
+      "domain": "hr",
+      "role": "executor",
+      "target": "sf_bulk",
+      "canonical_name": "hr_executor_sf_bulk",
+      "legacy_module": "agents/workers/sf_bulk_executor.py",
+      "description": "processor_queueのSF更新命令を受け取り、Salesforce Accountに一括書き込む",
+      "input": {
+        "type": "state_file",
+        "path": "state/processor_queue.json",
+        "schema": "[{sf_account_id, sf_name, update_fields:{...}, requires_manual, skip_reason}]"
+      },
+      "output": {
+        "type": "state_file",
+        "path": "state/executor_results.json",
+        "schema": "[{sf_account_id, sf_name, success, error_msg, timestamp}]"
+      },
+      "dependencies": ["salesforce_api"],
+      "llm_required": false,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_processor_coaching",
+      "domain": "hr",
+      "role": "processor",
+      "target": "coaching",
+      "canonical_name": "hr_processor_coaching",
+      "legacy_module": "agents/coaching_agent.py",
+      "description": "ES・面接対策 / 就活軸深掘り。対話形式でガクチカ・自己PR・志望動機を深掘りし、ES文を生成",
+      "input": {
+        "type": "user_message",
+        "source": "CLI / main.py"
+      },
+      "output": {
+        "type": "text",
+        "destination": "stdout / clipboard"
+      },
+      "dependencies": ["anthropic_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_executor_salesforce",
+      "domain": "hr",
+      "role": "executor",
+      "target": "salesforce",
+      "canonical_name": "hr_executor_salesforce",
+      "legacy_module": "agents/salesforce_agent.py",
+      "description": "tldv議事録テキストから学生情報をJSON抽出し、PersonAccount新規作成・更新・Task登録",
+      "input": {
+        "type": "text",
+        "source": "tldv transcript / user_message"
+      },
+      "output": {
+        "type": "api_write",
+        "destination": "Salesforce PersonAccount + Task"
+      },
+      "dependencies": ["anthropic_api", "salesforce_api", "google_sheets_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_parser_notion",
+      "domain": "hr",
+      "role": "parser",
+      "target": "notion",
+      "canonical_name": "hr_parser_notion",
+      "legacy_module": "agents/notion_agent.py",
+      "description": "Notion企業DBから企業情報を取得し、LINE送信用企業紹介文を生成",
+      "input": {
+        "type": "user_message",
+        "source": "CLI / main.py"
+      },
+      "output": {
+        "type": "text",
+        "destination": "stdout / LINE draft"
+      },
+      "dependencies": ["anthropic_api", "notion_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_executor_slack",
+      "domain": "hr",
+      "role": "executor",
+      "target": "slack",
+      "canonical_name": "hr_executor_slack",
+      "legacy_module": "agents/slack_agent.py",
+      "description": "SalesforceのPipelineデータをSlackスレッドへ投稿、絵文字マーカーで学生スレッドを自動検索",
+      "input": {
+        "type": "api_read",
+        "source": "Salesforce Pipeline"
+      },
+      "output": {
+        "type": "api_write",
+        "destination": "Slack thread"
+      },
+      "dependencies": ["salesforce_api", "slack_api"],
+      "llm_required": false,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_executor_line",
+      "domain": "hr",
+      "role": "executor",
+      "target": "line",
+      "canonical_name": "hr_executor_line",
+      "legacy_module": "agents/line_agent.py",
+      "description": "6シーンのLINEメッセージ生成（リマインド/ES催促/面接後フォロー/クロージング/初回接触/その他）",
+      "input": {
+        "type": "user_message",
+        "source": "CLI / main.py"
+      },
+      "output": {
+        "type": "text",
+        "destination": "stdout / clipboard"
+      },
+      "dependencies": ["anthropic_api", "notion_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_watcher_tldv",
+      "domain": "hr",
+      "role": "watcher",
+      "target": "tldv",
+      "canonical_name": "hr_watcher_tldv",
+      "legacy_module": "agents/tldv_agent.py",
+      "description": "tldv URL/.txtファイル/テキスト貼付の3入力方式対応、ミーティング情報取得・Claude自由質問",
+      "input": {
+        "type": "user_message",
+        "source": "tldv URL / .txt file / paste"
+      },
+      "output": {
+        "type": "text",
+        "destination": "stdout"
+      },
+      "dependencies": ["anthropic_api", "tldv_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_processor_report",
+      "domain": "hr",
+      "role": "processor",
+      "target": "report",
+      "canonical_name": "hr_processor_report",
+      "legacy_module": "agents/report_agent.py",
+      "description": "面談メモから6セクション構成の学生所感レポートを生成し、reports/に保存",
+      "input": {
+        "type": "user_message",
+        "source": "面談メモ（テキスト貼付）"
+      },
+      "output": {
+        "type": "file",
+        "destination": "career_advisor/reports/YYYY-MM-DD_氏名_所感.txt"
+      },
+      "dependencies": ["anthropic_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_executor_google",
+      "domain": "hr",
+      "role": "executor",
+      "target": "google",
+      "canonical_name": "hr_executor_google",
+      "legacy_module": "agents/google_agent.py",
+      "description": "Gmail未読取得・返信案生成・送信、Google Sheetsセル読取・書込、Google Docsテキスト読取・末尾追記",
+      "input": {
+        "type": "user_message",
+        "source": "CLI / main.py"
+      },
+      "output": {
+        "type": "api_write",
+        "destination": "Gmail / Google Sheets / Google Docs"
+      },
+      "dependencies": ["anthropic_api", "gmail_api", "google_sheets_api", "google_docs_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_processor_supporter",
+      "domain": "hr",
+      "role": "processor",
+      "target": "supporter",
+      "canonical_name": "hr_processor_supporter",
+      "legacy_module": "agents/supporter_agent.py",
+      "description": "全エージェントの機能・使い方を自然言語で案内、適切なエージェントを提案",
+      "input": {
+        "type": "user_message",
+        "source": "CLI / main.py"
+      },
+      "output": {
+        "type": "text",
+        "destination": "stdout"
+      },
+      "dependencies": ["anthropic_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_processor_interview",
+      "domain": "hr",
+      "role": "processor",
+      "target": "interview",
+      "canonical_name": "hr_processor_interview",
+      "legacy_module": "agents/interview_master_agent.py",
+      "description": "面接対策マスター。志望動機・ガクチカ・逆質問など面接全シーンをカバー",
+      "input": {
+        "type": "user_message",
+        "source": "CLI / main.py"
+      },
+      "output": {
+        "type": "text",
+        "destination": "stdout"
+      },
+      "dependencies": ["anthropic_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    },
+    {
+      "id": "hr_orchestrator_post_interview",
+      "domain": "hr",
+      "role": "orchestrator",
+      "target": "post_interview",
+      "canonical_name": "hr_orchestrator_post_interview",
+      "legacy_module": "agents/post_interview_full_support_agent.py",
+      "description": "tldv議事録→SF登録→LINE下書き→所感レポート→ノウハウ蓄積をワンストップで処理",
+      "input": {
+        "type": "text",
+        "source": "tldv transcript"
+      },
+      "output": {
+        "type": "multiple",
+        "destination": "Salesforce + LINE draft + reports/ file"
+      },
+      "dependencies": ["anthropic_api", "salesforce_api", "google_sheets_api"],
+      "llm_required": true,
+      "status": "active",
+      "version": "1.0"
+    }
+  ]
+}
