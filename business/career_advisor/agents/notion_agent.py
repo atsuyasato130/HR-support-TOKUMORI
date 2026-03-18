@@ -25,7 +25,7 @@ import requests
 from dotenv import load_dotenv
 
 BASE = os.path.dirname(os.path.dirname(__file__))
-load_dotenv(os.path.join(BASE, "../config/.env"))
+load_dotenv(os.path.join(BASE, "config/.env"))
 
 ANTHROPIC_API_KEY     = os.environ["ANTHROPIC_API_KEY"]
 NOTION_API_KEY        = os.environ["NOTION_API_KEY"]

@@ -51,7 +51,7 @@ from typing import Dict, List, Optional, Tuple
 
 _AGENTS_DIR = os.path.dirname(os.path.abspath(__file__))
 _CAREER_DIR = os.path.dirname(_AGENTS_DIR)
-_PROJECT_ROOT = os.path.dirname(_CAREER_DIR)
+_PROJECT_ROOT = _CAREER_DIR
 
 sys.path.insert(0, _CAREER_DIR)
 sys.path.insert(0, _AGENTS_DIR)

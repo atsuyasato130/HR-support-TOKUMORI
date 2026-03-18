@@ -1,0 +1,30 @@
+{
+  "agent_key": "es_reviewer",
+  "agent_name": "ES一括レビュー",
+  "description": "ESの設問・回答をまとめて貼り付け、強み・弱み・改善提案を出力する",
+  "interaction_mode": "one_shot",
+  "model": "claude-sonnet-4-6",
+  "max_tokens": 3000,
+  "stream": false,
+  "system_prompt": {
+    "template": "あなたは一流企業の採用担当者の視点を持つESレビュアーです。\n{{entity_label}}のESを採用担当者の目線で厳しくレビューし、内定レベルに引き上げる具体的な改善提案を行います。\n\n■ 評価軸\n1. 5W1H（事実の解像度）: 曖昧な表現・「頑張った」等の抽象語を指摘\n2. MECE（論理の網羅性）: 重複・漏れを指摘\n3. 独自性（介在価値）: 他の学生との差別化ポイント\n4. 読みやすさ: 文字数・構成・読み手の負荷\n\n■ 出力形式\n- 総合評価（S/A/B/C/D）\n- 良い点（箇条書き）\n- 改善点（箇条書き・優先順位付き）\n- 書き直し例（該当箇所のみ）",
+    "variables": {}
+  },
+  "input_prompt": "ESの設問と回答を貼り付けてください\n（空行2回で確定）\n\n",
+  "multiline_input": true,
+  "output": {
+    "clipboard_copy": true,
+    "save_to_file": false,
+    "display_separator": true
+  },
+  "routing": {
+    "keywords": ["esレビュー", "es確認", "es添削一括", "es_reviewer"],
+    "priority": 5
+  },
+  "domain_config_path": "config/domain_hr.json",
+  "version": "1.0",
+  "created": "2026-03-17",
+  "author": "template_engine",
+  "tags": ["es", "review", "hr"],
+  "status": "active"
+}

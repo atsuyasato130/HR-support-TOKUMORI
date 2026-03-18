@@ -19,7 +19,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 BASE = os.path.dirname(os.path.dirname(__file__))
-load_dotenv(os.path.join(BASE, "../config/.env"))
+load_dotenv(os.path.join(BASE, "config/.env"))
 
 SF_RECORDTYPE_SHINSOTSU = "0122w000001Ry2hAAC"
 

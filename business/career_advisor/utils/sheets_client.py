@@ -35,7 +35,7 @@ def get_sheets_client():
 
     # ── 1. OAuth2 token.json（既存の認証情報を流用）
     token_path = os.path.normpath(
-        os.path.join(os.path.dirname(__file__), "../../config/token.json")
+        os.path.join(os.path.dirname(__file__), "../config/token.json")
     )
     if os.path.exists(token_path):
         with open(token_path) as f:

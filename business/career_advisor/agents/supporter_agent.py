@@ -21,7 +21,7 @@ import anthropic
 from dotenv import load_dotenv
 
 BASE = os.path.dirname(os.path.dirname(__file__))
-load_dotenv(os.path.join(BASE, "../config/.env"))
+load_dotenv(os.path.join(BASE, "config/.env"))
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
@@ -39,7 +39,7 @@ HR支援AIエージェントシステム — 完全ガイド
 自然言語で指示するだけで、適切なエージェントが自動実行される。
 
 【起動方法】
-  cd /Users/atsuyasato/AI\ agent（HRsupport事業）/career_advisor
+  cd "/Users/atsuyasato/Claude AI/AI agent（HRsupport事業）/business/career_advisor"
   python3 main.py
 
 ---
@@ -154,7 +154,7 @@ HR支援AIエージェントシステム — 完全ガイド
 
 【ファイル構成】
 
-career_advisor/
+business/career_advisor/
 ├── main.py                    ← オーケストレーター（自然言語でエージェントを自動選択）
 ├── agents/
 │   ├── coaching_agent.py      ← 学生コーチング（ES・面接・就活軸）
@@ -170,22 +170,21 @@ career_advisor/
 │   ├── tldv_client.py         ← tldv APIクライアント
 │   ├── sheets_client.py       ← Google Sheetsクライアント
 │   └── google_docs_helper.py  ← Google Docsヘルパー
+├── config/
+│   ├── .env                   ← APIキー（ANTHROPIC/SF/NOTION/SLACK/GOOGLE等）
+│   ├── credentials.json       ← Google OAuth2認証情報
+│   └── token.json             ← Googleアクセストークン（認証後自動生成）
 └── reports/                   ← 生成レポートの保存先
 
-integrations/
+business/career_advisor/integrations/
 └── mcp_salesforce_notion.py   ← MCPサーバー（Claude Codeから直接ツール使用）
 
-communication/
+business/career_advisor/communication/
 ├── slack_bot.py               ← Slack AIボット（受信メッセージへの自動応答）
-└── gmail_agent.py             ← Gmail旧エージェント（google_agent.pyに統合済み）
+└── process_one_email.py       ← Gmail処理
 
-lstep/
+business/career_advisor/lstep/
 └── reply_agent.py             ← LINEメッセージへの自動応答ボット
-
-config/
-├── .env                       ← APIキー（ANTHROPIC/SF/NOTION/SLACK/GOOGLE等）
-├── credentials.json           ← Google OAuth2認証情報
-└── token.json                 ← Googleアクセストークン（認証後自動生成）
 
 ---
 
@@ -212,7 +211,7 @@ config/
    - Notion系の新機能 → notion_agent.py に新モード追加
 
 2. 新エージェントが必要な場合:
-   - career_advisor/agents/ に新しい xxx_agent.py を作成
+   - business/career_advisor/agents/ に新しい xxx_agent.py を作成
    - main.py の AGENT_REGISTRY に追加（自動でオーケストレーターが認識）
    - このファイル（supporter_agent.py）のSYSTEM_KNOWLEDGEを更新
 

@@ -19,10 +19,13 @@ import json
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "agents"))
 
+_CAREER_DIR = os.path.dirname(os.path.abspath(__file__))
+_AGENT_CONFIGS_DIR = os.path.join(_CAREER_DIR, "agent_configs")
+
 import anthropic
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "../config/.env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), "config/.env"))
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
@@ -120,7 +123,60 @@ AGENT_REGISTRY = {
             "即戦力", "再現性", "ポテンシャル", "内定", "mece", "5w1h",
         ],
     },
+    "post_interview_full_support": {
+        "name": "面談後フルサポート",
+        "desc": "SF+Notion+LINE+Slack を並列実行（面談後ワンクリック一括処理）",
+        "module": "post_interview_full_support_agent",
+        "keywords": [
+            "面談後", "フルサポート", "一括", "並列", "全部", "まとめて",
+            "sf登録してline送ってslack", "全自動", "post_interview",
+        ],
+    },
 }
+
+# ──────────────────────────────────────────────
+# JSON エージェント自動ロード
+# ──────────────────────────────────────────────
+
+def _load_json_agents() -> dict:
+    """
+    agent_configs/*.json をスキャンし、AGENT_REGISTRYにない新エージェントを返す。
+    _から始まるファイル（_schema.json等）はスキップ。
+    AGENT_REGISTRYのキーが常に優先（上書き不可）。
+    """
+    if not os.path.isdir(_AGENT_CONFIGS_DIR):
+        return {}
+
+    json_agents = {}
+    for filename in sorted(os.listdir(_AGENT_CONFIGS_DIR)):
+        if not filename.endswith(".json") or filename.startswith("_"):
+            continue
+        path = os.path.join(_AGENT_CONFIGS_DIR, filename)
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                config = json.load(fh)
+            key = config.get("agent_key")
+            if not key or key in AGENT_REGISTRY:
+                continue
+            if config.get("status", "active") != "active":
+                continue
+            json_agents[key] = {
+                "name": config["agent_name"],
+                "desc": config.get("description", ""),
+                "module": None,  # None = TemplateAgent で実行
+                "keywords": config.get("routing", {}).get("keywords", [key]),
+                "_config_path": path,
+            }
+        except Exception as exc:
+            print(f"  [WARN] {filename} の読み込み失敗: {exc}")
+    return json_agents
+
+
+# 起動時に一度だけスキャン
+_JSON_AGENTS = _load_json_agents()
+# AGENT_REGISTRY（ハードコード）が常に優先
+_FULL_REGISTRY = {**_JSON_AGENTS, **AGENT_REGISTRY}
+
 
 # ──────────────────────────────────────────────
 # Claude によるルーティング
@@ -131,7 +187,7 @@ _ROUTING_SYSTEM = (
     "ユーザーの指示を読み取り、どのエージェントを実行すべきかをJSONで返してください。\n\n"
     "【利用可能なエージェント】\n"
     + json.dumps(
-        {k: {"name": v["name"], "desc": v["desc"]} for k, v in AGENT_REGISTRY.items()},
+        {k: {"name": v["name"], "desc": v["desc"]} for k, v in _FULL_REGISTRY.items()},
         ensure_ascii=False, indent=2
     )
     + """
@@ -176,7 +232,7 @@ def _route_by_ai(user_input: str) -> list[str]:
             reason = data.get("reason", "")
             valid = [a for a in agents if a in AGENT_REGISTRY]
             if valid:
-                names = " → ".join(AGENT_REGISTRY[a]["name"] for a in valid)
+                names = " → ".join(_FULL_REGISTRY[a]["name"] for a in valid)
                 print(f"\n  実行: [{names}]  ({reason})")
                 return valid
     except Exception:
@@ -188,7 +244,7 @@ def _route_by_keywords(user_input: str) -> list[str]:
     """キーワードマッチによるフォールバックルーティング"""
     lowered = user_input.lower()
     scores: dict[str, int] = {}
-    for key, agent in AGENT_REGISTRY.items():
+    for key, agent in _FULL_REGISTRY.items():
         score = sum(1 for kw in agent["keywords"] if kw in lowered)
         if score > 0:
             scores[key] = score
@@ -207,14 +263,23 @@ def _route_by_keywords(user_input: str) -> list[str]:
 # ──────────────────────────────────────────────
 
 def _run_agent(agent_key: str):
-    agent_info = AGENT_REGISTRY.get(agent_key)
+    agent_info = _FULL_REGISTRY.get(agent_key)
     if not agent_info:
         print(f"  [ERROR] エージェント '{agent_key}' が見つかりません。")
         return
 
     try:
-        mod = __import__(agent_info["module"])
-        mod.run()
+        module_name = agent_info.get("module")
+        if module_name:
+            # 既存エージェント: 従来通りモジュールimport
+            mod = __import__(module_name)
+            mod.run()
+        else:
+            # JSONエージェント: TemplateAgentで実行
+            from template_agent import TemplateAgent
+            config_path = agent_info["_config_path"]
+            agent = TemplateAgent.from_config_file(config_path)
+            agent.execute()
     except ImportError as e:
         print(f"  [ERROR] モジュール読み込み失敗: {e}")
     except KeyboardInterrupt:
@@ -234,9 +299,13 @@ def _print_header():
     print("    「田中さんの進捗をSlackに共有して」")
     print("    「ES対策をしたい」")
     print("    「使い方を教えて」")
-    print("\n  直接起動:")
+    print("\n  直接起動（ハードコード11体）:")
     for key, agent in AGENT_REGISTRY.items():
-        print(f"    /{key:<12} {agent['name']} — {agent['desc']}")
+        print(f"    /{key:<30} {agent['name']} — {agent['desc']}")
+    if _JSON_AGENTS:
+        print("\n  JSONエージェント（agent_configs/より自動ロード）:")
+        for key, agent in _JSON_AGENTS.items():
+            print(f"    /{key:<30} {agent['name']} — {agent['desc']}")
     print("\n  /quit または q で終了")
     print("=" * 60)
 
@@ -261,11 +330,11 @@ def main():
         # 直接エージェント指定（/coaching など）
         if user_input.startswith("/"):
             key = user_input[1:].lower().strip()
-            if key in AGENT_REGISTRY:
+            if key in _FULL_REGISTRY:
                 _run_agent(key)
             else:
                 print(f"  エージェント '{key}' が見つかりません。")
-                print(f"  利用可能: {', '.join('/' + k for k in AGENT_REGISTRY)}")
+                print(f"  利用可能: {', '.join('/' + k for k in _FULL_REGISTRY)}")
             continue
 
         # AI ルーティング → エージェント実行
@@ -274,11 +343,11 @@ def main():
         if len(agents) == 1:
             _run_agent(agents[0])
         else:
-            names = " → ".join(AGENT_REGISTRY[a]["name"] for a in agents)
+            names = " → ".join(_FULL_REGISTRY[a]["name"] for a in agents)
             print(f"\n  複合タスク実行: {names}")
             for agent_key in agents:
                 print(f"\n{'─'*60}")
-                print(f"  {AGENT_REGISTRY[agent_key]['name']} を実行します")
+                print(f"  {_FULL_REGISTRY[agent_key]['name']} を実行します")
                 print(f"{'─'*60}")
                 _run_agent(agent_key)
 

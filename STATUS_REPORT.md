@@ -1,8 +1,11 @@
 # STATUS_REPORT.md — HR Support AI Agent プロジェクト現状レポート
 
 > **対象読者**: このプロジェクトを引き継ぐ戦略AI（軍師）または開発者
-> **作成日**: 2026-03-12
-> **プロジェクトパス**: `/Users/atsuyasato/AI agent（HRsupport事業）/`
+> **作成日**: 2026-03-12 / **最終更新**: 2026-03-17
+> **リポジトリ**: `/Users/atsuyasato/Claude AI/AI agent（HRsupport事業）/`
+> **エージェント本体**: `business/career_advisor/`
+> **プライベート領域**: `/Users/atsuyasato/Claude AI/private/`（リポジトリ外・同階層に分離）
+> **ダッシュボード**: [統合管理スプレッドシート](https://docs.google.com/spreadsheets/d/1g8PzcuPuUTTdO-kcSh4niuwfLw6d8zN8JQMZCrmyuH8/edit)
 
 ---
 
@@ -14,58 +17,65 @@
 
 ### エントリポイント
 ```
-career_advisor/main.py   # オーケストレーター（自然言語ルーティング）
+business/career_advisor/main.py   # オーケストレーター（自然言語ルーティング）
+
+起動方法:
+  cd "/Users/atsuyasato/Claude AI/AI agent（HRsupport事業）/business/career_advisor"
+  python3 main.py
 ```
 
-### ディレクトリ構造
+### ディレクトリ構造（2026-03-17 更新）
 
 ```
-AI agent（HRsupport事業）/
-├── career_advisor/
-│   ├── main.py                     # オーケストレーター（Claude自動ルーティング）
-│   ├── requirements.txt
-│   ├── agents/                     # 全エージェント（9種）
-│   │   ├── coaching_agent.py       # ES・面接・就活軸深掘り（338行）
-│   │   ├── salesforce_agent.py     # SF自動登録・更新（1,423行・最大規模）
-│   │   ├── notion_agent.py         # 企業紹介文生成（439行）
-│   │   ├── slack_agent.py          # 選考進捗Slack共有
-│   │   ├── line_agent.py           # Lステップメッセージ生成（6シーン）
-│   │   ├── tldv_agent.py           # tldv議事録取得・分析
-│   │   ├── report_agent.py         # 学生所感レポート生成
-│   │   ├── google_agent.py         # Gmail・Sheets・Docs連携
-│   │   ├── supporter_agent.py      # システムガイド・使い方サポート
-│   │   └── google_docs_helper.py
-│   └── utils/
-│       ├── tldv_client.py          # tldv APIクライアント（203行）
-│       └── sheets_client.py        # Google Sheets連携・学生検索
-├── integrations/
-│   ├── mcp_salesforce_notion.py    # MCPサーバー（Claude Code用・JSON-RPC over stdio）
-│   ├── kanrikun_client.py          # 採用一括かんりくん API（未稼働）
-│   └── kanrikun_sync.py
-├── config/
-│   ├── .env                        # 全APIキー（本番環境）
-│   ├── .env.example
-│   ├── credentials.json            # Google OAuth2認証情報
-│   ├── token.json                  # Google認証トークン（キャッシュ）
-│   └── processed_email_ids.json
-├── communication/
-│   ├── slack_bot.py                # Slack自動応答ボット（スタンドアロン）
-│   └── gmail_agent.py              # Gmail自動応答（google_agent.pyに統合済み）
-├── lstep/
-│   ├── reply_agent.py              # LINE自動応答ボット
-│   ├── webhook_server.py           # LINE Webhook受信サーバー
-│   └── requirements.txt
-├── scheduling/
-│   └── interview_scheduler.py      # 面談スケジューリング（実験的）
-├── tools/
-│   └── stock_monitor.py            # 株価アラート（本プロジェクトとは独立）
-├── docs/
-│   ├── system_diagram.md           # Mermaidフローチャート
-│   └── slack_post_draft.md
-├── web/                            # Next.js フロントエンド（未稼働）
-├── logs/                           # ログ出力ディレクトリ
-└── generate_resume_pdf.py          # PDF生成ツール（実験的）
+/Users/atsuyasato/                         ← ホームディレクトリ
+│
+└── Claude AI/
+    ├── private/                           ← ★ プライベート専用（リポジトリ外・同階層に分離）
+    │   └── life_supporter/                #   個人用エージェント・ワークスペース
+    └── AI agent（HRsupport事業）/          ← ビジネスリポジトリルート（.git）
+        ├── .claude/
+        │   ├── settings.json
+        │   └── settings.local.json
+        ├── business/                       ← ビジネス領域（全プロダクトここに集結）
+        │   ├── career_advisor/             ← エージェント本体（11体稼働）
+        │   │   ├── main.py                 # オーケストレーター（Claude自動ルーティング）
+        │   │   ├── requirements.txt
+        │   │   ├── agents/
+        │   │   │   ├── base_agent.py           # BaseAgent親クラス（PII洗浄）
+        │   │   │   ├── coaching_agent.py       # ES・面接・就活軸深掘り
+        │   │   │   ├── salesforce_agent.py     # SF自動登録・更新（最重要）
+        │   │   │   ├── notion_agent.py         # 企業紹介文生成
+        │   │   │   ├── slack_agent.py          # 選考進捗Slack共有
+        │   │   │   ├── line_agent.py           # Lステップメッセージ生成（6シーン）
+        │   │   │   ├── tldv_agent.py           # tldv議事録取得・分析
+        │   │   │   ├── report_agent.py         # 学生所感レポート生成
+        │   │   │   ├── google_agent.py         # Gmail・Sheets・Docs連携
+        │   │   │   ├── supporter_agent.py      # システムガイド
+        │   │   │   ├── interview_master_agent.py   # 面接マスター（5W1H×MECE）
+        │   │   │   └── post_interview_full_support_agent.py  # 面談後フル並列実行
+        │   │   ├── utils/
+        │   │   │   ├── tldv_client.py
+        │   │   │   └── sheets_client.py
+        │   │   ├── config/
+        │   │   │   ├── .env                # 全APIキー（.gitignore対象）
+        │   │   │   ├── credentials.json    # Google OAuth2（.gitignore対象）
+        │   │   │   ├── token.json          # Googleトークン（.gitignore対象）
+        │   │   │   ├── domain_hr.json      # ドメイン設定（業界転用可）
+        │   │   │   └── factory_settings.json
+        │   │   ├── integrations/
+        │   │   │   └── mcp_salesforce_notion.py  # MCPサーバー（18ツール）
+        │   │   ├── communication/
+        │   │   ├── lstep/
+        │   │   ├── docs/
+        │   │   ├── logs/
+        │   │   └── reports/
+        │   └── tokumo/                     ← Webアプリ（Next.js + Supabase・独立.git）
+        ├── STATUS_REPORT.md
+        ├── CLAUDE.md
+        └── .gitignore                      # private/ は .gitignore 済み
 ```
+
+> **`web/`（`Claude AI/web/`）について**: `.next/` ビルドキャッシュのみで実体なし（ソース・package.json 不在）。**手動削除を推奨**。`tokumo/` とは別物。
 
 ---
 
@@ -89,19 +99,26 @@ Claude (claude-sonnet-4-6) で入力を分析
   └─ /エージェントキー 記法で直接起動も可能
 ```
 
-### AGENT_REGISTRY（ルーティングテーブル）
+### AGENT_REGISTRY（ルーティングテーブル）— ダッシュボード Agent_Registry と同期
 
-| キー | 役割 |
-|------|------|
-| `coaching` | ES・面接対策 / 就活軸深掘り |
-| `salesforce` | tldv→SF自動登録 / 更新 |
-| `notion` | 企業紹介文生成 |
-| `slack` | 選考進捗共有 |
-| `line` | Lステップメッセージ生成 |
-| `tldv` | 議事録取得・分析 |
-| `report` | 学生所感レポート生成 |
-| `google` | Gmail・Sheets・Docs |
-| `supporter` | システムガイド |
+| キー | エージェント名 | 役割 | ステータス |
+|------|------|------|------|
+| `coaching` | 学生コーチング | ES・面接対策 / 就活軸深掘り | ✅ 稼働中 |
+| `salesforce` | Salesforce | tldv→SF自動登録 / 更新（最重要・4ステップ必須） | ✅ 稼働中 |
+| `notion` | Notion | 企業紹介文生成（確認なし直行） | ✅ 稼働中 |
+| `slack` | Slack | 選考進捗共有（SF読取→Slack書込） | ✅ 稼働中 |
+| `line` | LINE | Lステップメッセージ生成（6シーン） | ✅ 稼働中 |
+| `tldv` | tldv | 議事録取得・分析 | ⚠️ Businessプラン要 |
+| `report` | レポート | 学生所感レポート生成（6フォーマット） | ✅ 稼働中 |
+| `google` | Google | Gmail・Sheets・Docs（送信前Human確認必須） | ✅ 稼働中 |
+| `supporter` | サポーター | システムガイド・使い方説明 | ✅ 稼働中 |
+| `interview_master` | 面接マスター | 5W1H×MECE・新卒/中途自動判別・GDocs出力 | ✅ 稼働中 |
+| `post_interview_full_support` | 面談後フルサポート | SF+Notion+LINE+Slack 並列実行（最大PII処理） | ✅ 稼働中 |
+| `business_analyst` | 企業分析エージェント | 業界トレンド・競合分析・Notionスコア更新 | 🔮 予約枠 |
+| `industry_interview_it` | IT業界・面接軍師 | IT/SaaS特化面接対策 | 🔮 予約枠 |
+| `industry_interview_consulting` | コンサル・面接軍師 | ケース面接・フェルミ推定特化 | 🔮 予約枠 |
+| `industry_interview_finance` | 金融業界・面接軍師 | 銀行・証券・保険特化 | 🔮 予約枠 |
+| `agent_template` | Agent Template | 100エージェント量産基盤（domain_config JSON切替） | 🔮 予約枠 |
 
 ---
 
@@ -411,36 +428,45 @@ task = {
 
 Claude Code から Salesforce / Notion / Slack / Gmail / Spreadsheet を直接操作可能にする **JSON-RPC over stdio** 実装。
 
-### 実装済みツール
+### MCPサーバー登録（2026-03-17 完了）
+
+```json
+// .mcp.json（プロジェクトルート）
+{
+  "mcpServers": {
+    "hr-support": {
+      "command": "python3",
+      "args": [".../business/career_advisor/integrations/mcp_salesforce_notion.py"]
+    }
+  }
+}
+```
+
+全22ツールが `settings.local.json` に許可登録済。
+
+### 実装済みツール（22個）
 
 ```
-Salesforce:
-  search_salesforce(soql_query)
-  update_salesforce_record(object_type, record_id, fields_json)
-  create_salesforce_record(object_type, fields_json)
-  log_sf_meeting(account_id, student_name, meeting_date, summary, next_actions, advisor_name, is_second_or_later)
-  get_salesforce_summary()
+Salesforce (5):
+  search_salesforce, update_salesforce_record, create_salesforce_record,
+  log_sf_meeting, get_salesforce_summary
 
-Notion:
-  search_notion(query)
-  read_notion_database(database_id)   # httpx 直接呼び出し（notion-client v3の query 非対応のため）
-  read_notion_page(page_id)           # 全プロパティ＋ブロックを返す
-  update_notion_page(page_id, properties)
-  create_notion_page(parent_id, properties)
+Notion (6):
+  search_notion, read_notion_database, read_notion_page,
+  create_notion_child_page, create_notion_page, archive_notion_page, update_notion_page
 
-Slack:
-  send_slack_message(channel, text)
-  get_slack_channels()
-  get_slack_messages(channel_id, limit)
+Slack (3):
+  send_slack_message, get_slack_channels, get_slack_messages
 
-Gmail:
-  send_gmail(to, subject, body)
-  read_gmail(max_results)
+Gmail (2):
+  send_gmail, read_gmail
 
-Spreadsheet:
-  search_student_in_spreadsheet(name, meeting_date)
-  update_google_spreadsheet(spreadsheet_id, range, values)
-  create_google_spreadsheet(title)
+Spreadsheet (6):
+  search_student_in_spreadsheet, read_google_spreadsheet, create_google_spreadsheet,
+  format_google_spreadsheet, add_sheet_tab, update_google_spreadsheet
+
+Google Docs (2):
+  read_google_doc, create_google_doc
 ```
 
 ---
@@ -464,47 +490,80 @@ Spreadsheet:
 
 ---
 
-## 9. 実装状況サマリー
+## ⚠️ 削除待ちファイル（手動実行が必要）
 
-| 機能 | 実装状態 | 備考 |
-|------|---------|------|
-| coaching_agent | ✅ 完全実装 | ES・就活軸ともに対話形式で完結 |
-| salesforce_agent | ✅ 完全実装 | 全フロー完成（1,423行・最大規模）|
-| notion_agent | ✅ 完全実装 | 企業紹介文・複数企業一括処理対応 |
-| slack_agent | ✅ 完全実装 | 選考進捗共有・スレッド自動検索 |
-| line_agent | ✅ 完全実装 | 6シーン対応・複数パターン生成 |
-| tldv_agent | ✅ 完全実装 | 3入力方式・Claude自由分析対応 |
-| report_agent | ✅ 完全実装 | 定型フォーマット生成・ファイル保存 |
-| google_agent | ✅ 完全実装 | Gmail・Sheets・Docs全機能 |
-| supporter_agent | ✅ 完全実装 | 完全なシステムガイド |
-| MCPサーバー | ✅ 完全実装 | Claude Code連携 18ツール |
-| tldv API連携 | ⏸ 未使用 | Businessプラン要（現在Proプラン）|
-| LINE Messaging API | ⏸ 未設定 | `LINE_CHANNEL_ACCESS_TOKEN` 未設定 |
-| Lステップ API | ⏸ 未設定 | エンドポイント・トークン未取得 |
-| 採用かんりくん API | ⏸ 未設定 | `KANRIKUN_CLIENT_ID` 未設定 |
-| Next.js フロントエンド | ⏸ 未稼働 | `web/` ディレクトリに存在するが未連携 |
+Claude Code の `settings.json` には `rm`・`rmdir`・`trash` コマンドが **deny 設定** されているため、以下は手動削除が必要。
+
+```bash
+# ターミナルで直接実行すること（Claude Codeからは実行不可）
+
+# 1. private/ の旧コピー（~/private/ に移動済み・本体は存在する）
+rm -rf "/Users/atsuyasato/Claude AI/AI agent（HRsupport事業）/private/"
+
+# 2. web/ 残骸（.next/キャッシュのみ・ソースなし）
+rm -rf "/Users/atsuyasato/Claude AI/web/"
+```
 
 ---
 
-## 10. 進行中タスクと技術的課題
+## 8b. 未実装機能監査（2026-03-17）
 
-### 現在直面しているボトルネック
+ダッシュボード Dev_Roadmap / Integration_Matrix に記録されているが、コード上に実体が存在しない機能:
 
-| 課題 | 詳細 | 回避策 |
-|------|------|--------|
-| tldv API が使えない | Businessプランのみ対応（現Pro）| .txt ファイル or テキスト貼り付けで代替 |
-| LINE Messaging API 未連携 | トークン未設定 | line_agent は「文章生成のみ」として稼働中 |
-| Lステップ直送信 不可 | APIエンドポイント未取得 | 生成文章をコピペして手動送信 |
-| Notion クエリ制限 | notion-client v3 の query 非対応 | MCP内で httpx 直接呼び出しにより解決済み |
-| 大学名2フィールド問題 | UniversityName__pc と Field26__c の両方が必要 | salesforce_agent 内で両方セットする実装済み |
+| 機能 | 計画ステータス | 実態 |
+|------|------------|------|
+| Slackアラート（有効学生率チェック） | 計画あり | ❌ 未実装。`slack_agent.py` に関数なし |
+| Spir面談予約通知・GAS連携 | 計画あり | ❌ 未実装。Spir API コード存在しない |
+| エンゲージ求人票自動投稿（Puppeteer） | 計画あり | ❌ 未実装。Node.js/Puppeteer コードなし |
+| 稼働・請求・売上統合管理 | 計画あり | ❌ 未実装。関連エージェントなし |
+| LINE就活ヒアリング自動化 | 部分実装 | ⚠️ `line_agent.py`は文章生成のみ。`LSTEP_API_ENDPOINT` 空欄のため実際の送信不可 |
 
-### 次に実装予定（優先度順）
+---
 
-1. **クロージング支援強化** — coaching_agent への「内定承諾判断サポート」シーン追加
-2. **LINE直送信** — Lステップ API 取得後に line_agent へ送信機能実装
-3. **tldv Businessプラン移行後** — URL入力フローの完全自動化
-4. **採用かんりくん連携** — 送客後の進捗自動取り込み
-5. **Next.js フロントエンド** — CAが操作するWebダッシュボード
+## 9. 実装状況サマリー（ダッシュボード Agent_Registry 準拠）
+
+| エージェント | 実装状態 | 備考 |
+|------|---------|------|
+| coaching_agent | ✅ 完全実装 | ES・就活軸ともに対話形式で完結 |
+| salesforce_agent | ✅ 完全実装 | 全フロー完成・最重要エージェント |
+| notion_agent | ✅ 完全実装 | 企業紹介文・複数企業一括処理対応 |
+| slack_agent | ✅ 完全実装 | 選考進捗共有・スレッド自動検索 |
+| line_agent | ✅ 完全実装 | 6シーン対応・複数パターン生成 |
+| tldv_agent | ⚠️ 条件付き稼働 | Businessプラン要（現Pro）→ .txt代替対応中 |
+| report_agent | ✅ 完全実装 | 定型フォーマット生成・ファイル保存 |
+| google_agent | ✅ 完全実装 | Gmail・Sheets・Docs全機能（送信前Human確認）|
+| supporter_agent | ✅ 完全実装 | 完全なシステムガイド |
+| interview_master_agent | ✅ 完全実装 | 5W1H×MECE・GDocs出力対応 |
+| post_interview_full_support_agent | ✅ 完全実装 | SF+Notion+LINE+Slack並列実行。最大PII処理・要確認 |
+| MCPサーバー | ✅ 完全実装 | Claude Code連携 22ツール（.mcp.json 登録済）|
+| LINE Messaging API | ⏸ 未設定 | `LINE_CHANNEL_ACCESS_TOKEN` 未設定 |
+| Lステップ API | ⏸ 未設定 | エンドポイント・トークン未取得 |
+| 採用かんりくん API | ⏸ 未設定 | `KANRIKUN_CLIENT_ID` 未設定 |
+| TOKUMO（Next.js） | 🔧 開発中 | `business/tokumo/` に存在・Supabase連携中 |
+
+---
+
+## 10. 開発ロードマップ（ダッシュボード Dev_Roadmap 準拠・2026-03-17）
+
+### 最優先（S）
+
+| # | タスク | ステータス |
+|---|--------|---------|
+| 1 | tldv Business移行・API連携有効化 | 未着手 |
+| 2 | SF登録 完全ワンクリック自動化 | 🔧 開発中 |
+| 3 | TOKUMO API Bridge 構築（Supabase Edge Functions） | 未着手 |
+
+### 優先度A
+
+| # | タスク | ステータス |
+|---|--------|---------|
+| 4 | LINE企業紹介 自動配信フロー | 未着手 |
+| 5 | 学生フォローアップ 自動リマインダー | 未着手 |
+| 6 | 面談前 自動サマリー生成 | 未着手 |
+| 7 | 学生向けESレビューUI（TOKUMO公開） | 未着手 |
+| 8 | Agent Template 量産化設計図（100エージェント基盤） | 未着手 |
+
+### 優先度B〜C（省略・ダッシュボード Dev_Roadmap タブ参照）
 
 ---
 

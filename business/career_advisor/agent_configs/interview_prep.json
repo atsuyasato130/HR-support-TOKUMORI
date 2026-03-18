@@ -1,0 +1,66 @@
+{
+  "agent_key": "interview_prep",
+  "agent_name": "面接準備コーチ",
+  "description": "企業・ラウンドに応じた想定質問と対策を生成する",
+  "interaction_mode": "form_then_generate",
+  "model": "claude-sonnet-4-6",
+  "max_tokens": 2500,
+  "stream": false,
+  "system_prompt": {
+    "template": "あなたはキャリアアドバイザーのアシスタントAIです。\n{{entity_label}}の面接準備を専門的にサポートします。\n\n■ 方針\n- 志望企業の特性・選考ラウンドに合わせた実践的な想定質問を提示する\n- 回答のポイントは具体的・簡潔に\n- {{entity_label}}が自分の言葉で話せるよう、回答の「型」を提示する（答えを丸写しさせない）",
+    "variables": {}
+  },
+  "form_fields": [
+    {
+      "key": "student_name",
+      "label": "学生名",
+      "prompt": "学生名 > ",
+      "required": true,
+      "default": null
+    },
+    {
+      "key": "company",
+      "label": "志望企業名",
+      "prompt": "志望企業名 > ",
+      "required": true,
+      "default": null
+    },
+    {
+      "key": "round",
+      "label": "面接ラウンド",
+      "prompt": "ラウンド（一次/二次/最終） > ",
+      "required": false,
+      "default": "一次"
+    },
+    {
+      "key": "industry",
+      "label": "業界",
+      "prompt": "業界（例: IT・コンサル・金融） > ",
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "student_background",
+      "label": "学生情報・ガクチカ等",
+      "prompt": "学生の特徴・ガクチカ（任意・Enterでスキップ） > ",
+      "required": false,
+      "default": "（未入力）"
+    }
+  ],
+  "generation_prompt_template": "【面接準備依頼】\n学生名: {{student_name}}\n志望企業: {{company}}\n業界: {{industry}}\n面接ラウンド: {{round}}\n学生背景・ガクチカ: {{student_background}}\n\n以下の形式でまとめてください:\n\n## 1. このラウンドの攻略ポイント（3点）\n\n## 2. 想定質問と回答の型（5問）\n各質問に対して「何を伝えるべきか」の型だけを提示（答えを書かない）\n\n## 3. 逆質問例（2問）\n企業研究・主体性が伝わるもの\n\n## 4. 当日の注意事項（2点）",
+  "output": {
+    "clipboard_copy": true,
+    "save_to_file": false,
+    "display_separator": true
+  },
+  "routing": {
+    "keywords": ["面接準備", "想定質問", "interview_prep", "面接練習", "面接対策事前"],
+    "priority": 5
+  },
+  "domain_config_path": "config/domain_hr.json",
+  "version": "1.0",
+  "created": "2026-03-17",
+  "author": "template_engine",
+  "tags": ["interview", "hr", "coaching"],
+  "status": "active"
+}

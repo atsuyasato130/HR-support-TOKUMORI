@@ -33,8 +33,8 @@ from typing import Any, Callable, Dict, List, Optional
 import anthropic
 from dotenv import load_dotenv
 
-# プロジェクトルート: career_advisor/agents/ → career_advisor/ → project root
-_BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# プロジェクトルート: career_advisor/agents/ → career_advisor/
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(_BASE_DIR, "config", ".env"))
 
 # ──────────────────────────────────────────────

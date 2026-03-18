@@ -22,7 +22,7 @@ import anthropic
 from dotenv import load_dotenv
 
 BASE = os.path.dirname(os.path.dirname(__file__))
-load_dotenv(os.path.join(BASE, "../config/.env"))
+load_dotenv(os.path.join(BASE, "config/.env"))
 
 sys.path.insert(0, os.path.join(BASE, "utils"))
 from tldv_client import (  # type: ignore

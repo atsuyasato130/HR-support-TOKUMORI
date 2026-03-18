@@ -14,23 +14,33 @@
 - メモリファイル（.claude/memory/）の作成・更新
 - その他、システム構成に影響する変更全般
 
-### Update_Logへの記録方法
+### Update_Logへの記録方法（必ずこの方法を使うこと）
 
 スプレッドシートID: `1g8PzcuPuUTTdO-kcSh4niuwfLw6d8zN8JQMZCrmyuH8`
 
-`update_google_spreadsheet` で Update_Log タブに1行追記する:
+**⚠️ `append_row` は禁止。必ず `dashboard_logger.py` を使うこと。**
+（append_rowは末尾追加のため順番が崩れる。insert_rowsで Row5 に挿入する設計）
 
-| 列 | 内容 |
-|---|---|
-| A | 連番（前の最終行+1） |
-| B | 日時（例: 2026-03-17 14:30） |
-| C | 種別アイコン（🆕新規作成 / ➕機能追加 / 🔧修正 / 🎨UI変更 / 🔄更新 / 📋設定変更） |
-| D | 依頼内容（ユーザーの依頼を1〜2行で要約） |
-| E | 変更タブ/ファイル（例: Main_Map / salesforce_agent.py） |
-| F | 主な変更内容（箇条書き3〜5点） |
-| G | ステータス（✅完了 / 🔧実装中 / 📋予定） |
+```python
+# 正しい記録方法（セッション内のPythonコードから呼ぶ）
+import sys
+sys.path.insert(0, "utils")
+from dashboard_logger import log_update
 
-記録後に **統計バー（Row 2）の「総更新回数」と「最終更新日時」も更新**すること。
+log_update(
+    icon="🔧 修正",           # 🆕新規作成/➕機能追加/🔧修正/🎨UI変更/🔄更新/📋設定変更
+    summary="依頼内容の1〜2行要約",
+    targets="変更したファイル/タブ名",
+    details="①変更点A ②変更点B ③変更点C",
+    # status はデフォルト "✅ 完了"
+)
+```
+
+`dashboard_logger.py` が自動で行う処理:
+1. 連番（前の最大値+1）を計算
+2. 日時（YYYY/MM/DD HH:MM）を自動付与
+3. **Row5 に insert_rows**（最新エントリが常に先頭に来る）
+4. **Row2 統計バー**（総更新回数・最終更新日時）を自動更新
 
 ### 対象外（ログ不要）
 - 情報検索・質問応答のみ（ファイル・外部サービスへの変更を伴わない）
@@ -39,24 +49,67 @@
 
 ---
 
+## knowledge/ 動的同期義務（2026-03-17 追加）
+
+`business/career_advisor/knowledge/` はシステムの「生きた設計書」である。
+**コード・設定・エージェント・スプレッドシートへの変更のたびに、必ず対応するknowledgeファイルを更新せよ。**
+
+### 更新トリガー早見表
+
+| 変更内容 | 更新対象 |
+|----------|---------|
+| エージェント追加・変更 | `knowledge/architecture_master.md` §1・§8 + `knowledge/AGENT_MANIFEST.json` |
+| SFフィールド追加・変更 | `knowledge/architecture_master.md` §2 |
+| MCPツール追加 | `knowledge/architecture_master.md` §6 + `settings.local.json` |
+| アーキテクチャ変更 | `knowledge/architecture_master.md` 該当セクション |
+| ディレクトリ構造変更 | `CLAUDE.md` + `STATUS_REPORT.md` + `memory/project_directory_structure.md` |
+
+### knowledge/ ファイル一覧
+
+| ファイル | 内容 |
+|---------|------|
+| `architecture_master.md` | **最上位行動指針**・全秘伝仕様・SF独自フィールド・並列処理設計 |
+| `AGENT_MANIFEST.json` | エージェント正規登録台帳（11体） |
+| `system_diagram.md` | システムダイアグラム・処理フロー |
+| `gems_student_interview.md` | 就活対策AI秘伝システムプロンプト（3モード×3レベル） |
+| `slack_post_draft.md` | Slack向けシステム説明ドキュメント |
+
+---
+
 ## 情報の絶対隔離ルール（最重要・例外なし）
+
+### ディレクトリ構造と隔離原則（2026-03-17 更新）
+
+```
+/Users/atsuyasato/Claude AI/
+├── private/                    ← プライベート領域（リポジトリ外・同階層に物理分離）
+│   └── life_supporter/         ← 個人用エージェント（business/との接触禁止）
+└── AI agent（HRsupport事業）/   ← ビジネス専用リポジトリ（private/は存在しない）
+    ├── business/
+    │   ├── career_advisor/ ← エージェント本体
+    │   └── tokumo/         ← Webアプリ
+    ├── STATUS_REPORT.md
+    └── CLAUDE.md
+```
+
+**`private/` はリポジトリ外（`/Users/atsuyasato/Claude AI/private/`）に物理分離済み。**
+このリポジトリ内に `private/` フォルダは存在しない。
 
 ### 1. ダッシュボードへの反映禁止
 以下の情報は、いかなる場合も統合管理ダッシュボード（Googleスプレッドシート）に反映させてはならない:
-- `private/` フォルダ配下での活動・作業内容
-- `private/` 配下エージェントの実行ログ
+- `/Users/atsuyasato/Claude AI/private/` 配下での活動・作業内容
+- `life_supporter` エージェントの実行ログ
 - ライフサポーターとの対話内容
 
 Update_Log・Main_Map・Agent_Registry 等すべてのタブが対象。
 
 ### 2. ログの物理的隔離
-- `private/` 配下エージェントのログは `private/logs/` 内のローカルファイルにのみ保存
+- `private/` 配下エージェントのログは `/Users/atsuyasato/Claude AI/private/logs/` 内のローカルファイルにのみ保存
 - `business/` 側の Supabase ログテーブルや共通ログファイルへの出力を禁止
-- 保存する場合は暗号化または秘匿された状態で行う
 
 ### 3. RAG・コンテキストの非干渉
-- `business/` 側エージェントは `private/` フォルダの内容をコンテキストとして読み取ってはならない
-- 検索・RAG・ファイル読み込み時に `private/` ディレクトリがスコープに入らないよう厳格に制限する
+- `business/` 側エージェントは `/Users/atsuyasato/private/` の内容をコンテキストとして読み取ってはならない
+- ファイル読み込み時に `private/` ディレクトリがスコープに入らないよう厳格に制限する
 
 ---
 
@@ -82,7 +135,17 @@ Update_Log・Main_Map・Agent_Registry 等すべてのタブが対象。
 
 ## プロジェクト固有情報
 
-詳細はメモリファイル（`~/.claude/projects/-Users-atsuyasato-AI-agent-HRsupport---/memory/`）を参照:
+### ディレクトリ（完全最新版・2026-03-17）
+- **エージェント本体**: `business/career_advisor/`（11体稼働）
+- **Webアプリ**: `business/tokumo/`（Next.js + Supabase）
+- **プライベート**: `/Users/atsuyasato/Claude AI/private/`（リポジトリの外・同階層・非接触）
+- **ダッシュボード**: [統合管理スプレッドシート](https://docs.google.com/spreadsheets/d/1g8PzcuPuUTTdO-kcSh4niuwfLw6d8zN8JQMZCrmyuH8/edit)
+
+### 注意事項
+- `Claude AI/web/` は `.next/` ビルドキャッシュのみで実体なし → 削除推奨
+- エージェント起動: `cd business/career_advisor && python3 main.py`
+
+詳細はメモリファイル（`~/.claude/projects/-Users-atsuyasato-Claude-AI/memory/`）を参照:
 - `MEMORY.md` — 全体インデックス
 - `project_tokumo.md` — TOKUMOアプリ詳細
 - `feedback_dashboard_update.md` — ダッシュボード更新ルール

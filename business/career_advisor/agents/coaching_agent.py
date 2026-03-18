@@ -20,7 +20,7 @@ import anthropic
 from dotenv import load_dotenv
 
 BASE = os.path.dirname(os.path.dirname(__file__))
-load_dotenv(os.path.join(BASE, "../config/.env"))
+load_dotenv(os.path.join(BASE, "config/.env"))
 
 client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 

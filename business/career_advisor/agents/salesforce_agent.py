@@ -27,7 +27,7 @@ from datetime import date
 from dotenv import load_dotenv
 
 BASE = os.path.dirname(os.path.dirname(__file__))
-load_dotenv(os.path.join(BASE, "../config/.env"))
+load_dotenv(os.path.join(BASE, "config/.env"))
 
 # utils/ をパスに追加
 sys.path.insert(0, os.path.join(BASE, "utils"))
