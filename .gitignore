@@ -1,4 +1,13 @@
-# Secrets
+# ============================================================
+# TOKUMO OS — .gitignore
+# ============================================================
+
+# Secrets & 環境変数
+.env
+.env.*
+.env.local
+.env.production
+.env.development
 business/career_advisor/config/.env
 business/career_advisor/config/credentials.json
 business/career_advisor/config/token.json
@@ -6,22 +15,34 @@ business/career_advisor/config/processed_email_ids.json
 
 # Logs
 business/career_advisor/logs/
+logs/
 *.log
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
 .venv/
 venv/
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Node / Next.js
 node_modules/
 .next/
 .vercel/
+*.tsbuildinfo
 
 # macOS
 .DS_Store
+.AppleDouble
 
-# Private
+# IDE
+.vscode/
+.idea/
+
+# Private（リポジトリ外に物理分離済みだが念のため）
 private/

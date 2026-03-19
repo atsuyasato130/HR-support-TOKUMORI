@@ -1,0 +1,40 @@
+{
+  "_meta": {
+    "version": "2.0.0",
+    "updated": "2026-03-18",
+    "description": "TOKUMO OS v2 — Core Worker Registry"
+  },
+  "workers": [
+    {
+      "id": "hr_watcher_company_sf",
+      "domain": "hr",
+      "role": "watcher",
+      "target": "company_sf",
+      "module": "business.agents.company_watcher_sf",
+      "class": "CompanyWatcherSF",
+      "description": "SF Account オブジェクトの変更を検知し、TOKUMO企業DBに同期する",
+      "llm_required": false,
+      "status": "active"
+    },
+    {
+      "id": "hr_watcher_notion_company",
+      "domain": "hr",
+      "role": "watcher",
+      "target": "notion_company",
+      "module": "business.agents.notion_company_watcher",
+      "description": "Notion企業DBの変更を検知する",
+      "llm_required": false,
+      "status": "active"
+    },
+    {
+      "id": "hr_processor_coaching",
+      "domain": "hr",
+      "role": "processor",
+      "target": "coaching",
+      "module": "business.agents.coaching_processor",
+      "description": "面談コーチングレポートを生成する（Sonnet使用）",
+      "llm_required": true,
+      "status": "active"
+    }
+  ]
+}
