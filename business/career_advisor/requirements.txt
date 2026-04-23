@@ -1,7 +1,0 @@
-anthropic>=0.40.0
-python-dotenv>=1.0.0
-simple-salesforce>=1.12.0  # Salesforce記載エージェント用
-requests>=2.31.0            # tldv API連携用
-gspread>=6.0.0              # Google Sheets API連携用
-google-auth>=2.0.0          # Google認証
-notion-client>=2.2.0    # 企業紹介文生成エージェント用

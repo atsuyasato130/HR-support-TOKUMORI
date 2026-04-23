@@ -1,0 +1,12 @@
+[
+  {
+    "label": "ai-empire-evolution-cycle",
+    "name": "ai-empire 進化サイクル",
+    "system": "ai_empire_biz",
+    "stderr": "{root}/logs/dashboard_stderr.log",
+    "stdout": "{root}/logs/dashboard_stdout.log",
+    "critical": false,
+    "expect_interval_hours": 200,
+    "log_source": "file"
+  }
+]

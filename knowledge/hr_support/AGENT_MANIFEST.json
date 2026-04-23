@@ -1,0 +1,547 @@
+{
+  "version": "3.1",
+  "updated": "2026-04-22",
+  "description": "Tokumori — 全エージェントカタログ（49体・BU別構成）",
+  "notice": "このファイルは sync_os.py により empire.db から自動生成されます。手動編集は次回sync時に上書きされます。",
+  "agents": [
+    {
+      "canonical_id": "hr_orchestrator_post_interview",
+      "name": "HRsupportオーケストレーター",
+      "bu": "HRsupport",
+      "layer": "Orchestrator",
+      "desc": "tldv→SF→LINE→レポート 並列実行",
+      "apis": [
+        "Claude/SF/GSheets"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_executor_salesforce",
+      "name": "Salesforce",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "tldv議事録→SF PersonAccount登録（最重要）",
+      "apis": [
+        "Claude/SF/GSheets"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_parser_notion",
+      "name": "Notion",
+      "bu": "HRsupport",
+      "layer": "Parser",
+      "desc": "企業DB取得・企業紹介文生成（複数一括対応）",
+      "apis": [
+        "Claude/Notion"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_executor_slack",
+      "name": "Messaging",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "選考進捗Slackスレッドへ自動共有",
+      "apis": [
+        "SF/Slack"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_watcher_tldv",
+      "name": "tldv",
+      "bu": "HRsupport",
+      "layer": "Watcher",
+      "desc": "議事録取得・Claude自由質問分析",
+      "apis": [
+        "Claude/tldv"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_executor_google",
+      "name": "Google Suite",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "Gmail返信/Sheets読書/Docs操作",
+      "apis": [
+        "Claude/Gmail/GDrive"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_processor_coaching",
+      "name": "学生コーチング",
+      "bu": "HRsupport",
+      "layer": "Processor",
+      "desc": "ES・面接対策/就活軸深掘り（5W1H×MECE）",
+      "apis": [
+        "Claude"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_processor_interview",
+      "name": "面接マスター",
+      "bu": "HRsupport",
+      "layer": "Processor",
+      "desc": "5W1H×MECE・新卒/中途自動判別・GDocs出力",
+      "apis": [
+        "Claude"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_processor_report",
+      "name": "レポート",
+      "bu": "HRsupport",
+      "layer": "Processor",
+      "desc": "学生所感レポート自動生成・保存（6セクション）",
+      "apis": [
+        "Claude"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_processor_supporter",
+      "name": "サポーター",
+      "bu": "HRsupport",
+      "layer": "Processor",
+      "desc": "全エージェント使い方ガイド・機能提案",
+      "apis": [
+        "Claude"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hrsup_chuto",
+      "name": "中途支援",
+      "bu": "HRsupport",
+      "layer": "SubOrchestrator",
+      "desc": "【Sub-Orch】中途採用支援。CA/RA担当エージェントへタスク委譲し選考プロセスを管理",
+      "apis": [
+        "Claude/SF/Notion"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hrsup_shinsotsu",
+      "name": "新卒支援",
+      "bu": "HRsupport",
+      "layer": "SubOrchestrator",
+      "desc": "【Sub-Orch】新卒採用支援。CA/LG担当エージェントへタスク委譲し内定〜入社フォローを管理",
+      "apis": [
+        "Claude/SF/Notion"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hrsup_ra",
+      "name": "RA",
+      "bu": "HRsupport",
+      "layer": "Role",
+      "desc": "RAとして企業側折衝・求人票作成・クライアント報告・Slack共有を担当",
+      "apis": [
+        "Claude/SF/GSheets/Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hrsup_lg",
+      "name": "LG（インターン生）",
+      "bu": "HRsupport",
+      "layer": "Role",
+      "desc": "LGとしてインターン生がリードジェネレーション業務。Notion管理・Slack連絡を自動補助",
+      "apis": [
+        "Claude/Notion/Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hrsup_ca",
+      "name": "CA",
+      "bu": "HRsupport",
+      "layer": "Role",
+      "desc": "キャリアアドバイザー業務全般（面談・選考管理・コーチング）。社員/業務委託でセキュリティレベル・アクセス権を分離",
+      "apis": [
+        "Claude/SF/GSheets"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hr_google_gmail",
+      "name": "Gmail",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "学生・企業へのメール返信・受信・テンプレート送信",
+      "apis": [
+        "Gmail"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_google_gdrive",
+      "name": "GDrive / GDocs",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "レポート・面接Q&A・議事録をGDocs/GDriveへ保存・管理",
+      "apis": [
+        "GDrive/GDocs"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_google_gsheets",
+      "name": "GSheets",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "スプレッドシート読書き・KPI集計・データ更新",
+      "apis": [
+        "GSheets"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_messaging_line",
+      "name": "LINE",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "学生向けLステップ文章生成・配信（6シーン・複数パターン）",
+      "apis": [
+        "LINE/Lステップ"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_messaging_slack",
+      "name": "Slack",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "社内選考進捗のSlackスレッドへ自動共有",
+      "apis": [
+        "Slack/SF"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_notifier_sf_change_dispatcher",
+      "name": "SF変更ディスパッチャ",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "sf_record_watcher のイベントキューを consume して Slack へ配信。idempotency key で重複防止・DLQ付き。",
+      "apis": [
+        "SF/Slack"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_notifier_followup_alert",
+      "name": "フォローアップアラート",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "14日未接触の学生を Claude で優先度分析 → alert_channel に TOP10 投稿。日次冪等。",
+      "apis": [
+        "SF/Claude/Slack"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "hr_notifier_weekly_digest",
+      "name": "週次ダイジェスト",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "SF 週次KPI を Claude で所見生成 → digest_channel に投稿。ISO週で冪等。",
+      "apis": [
+        "SF/Claude/Slack"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "rpo_orchestrator",
+      "name": "RPOオーケストレーター",
+      "bu": "RPO",
+      "layer": "Orchestrator",
+      "desc": "【Orchestrator】RPO事業全体の指揮。採用KPI管理・候補者パイプライン・クライアント報告を統括",
+      "apis": [
+        "Claude/SF/GSheets"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "rpo_cs",
+      "name": "CS",
+      "bu": "RPO",
+      "layer": "Role",
+      "desc": "RPOカスタマーサクセス（クライアント報告・採用KPI管理・定例対応）。社員/業務委託でセキュリティレベルを分離",
+      "apis": [
+        "Claude/SF/GSheets"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "sales_orchestrator",
+      "name": "Salesオーケストレーター",
+      "bu": "Sales",
+      "layer": "Orchestrator",
+      "desc": "【Orchestrator】Sales事業を統括。リード管理・商談進捗・クロージング支援を一元制御",
+      "apis": [
+        "Claude/SF/Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "sales_fs",
+      "name": "FS",
+      "bu": "Sales",
+      "layer": "Role",
+      "desc": "フィールドセールス（商談管理・提案書生成・契約フォロー）。社員/業務委託でセキュリティレベルを分離",
+      "apis": [
+        "Claude/SF/Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "sales_is",
+      "name": "IS",
+      "bu": "Sales",
+      "layer": "Role",
+      "desc": "インサイドセールス（リード育成・アポイント管理・商談ログ記録）。社員/業務委託でセキュリティレベルを分離",
+      "apis": [
+        "Claude/SF/Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hr_dept_orchestrator",
+      "name": "人事オーケストレーター",
+      "bu": "人事",
+      "layer": "Orchestrator",
+      "desc": "【Orchestrator】人事部門全体を統括。社員採用・業務委託採用・インターン採用の3系統を指揮",
+      "apis": [
+        "Claude/Notion/Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hr_dept_employee_hiring",
+      "name": "社員採用",
+      "bu": "人事",
+      "layer": "Executor",
+      "desc": "正社員採用プロセス全体（JD作成→スクリーニング→面接→オファー）を管理",
+      "apis": [
+        "Claude/SF/Notion"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hr_dept_contractor_hiring",
+      "name": "業務委託採用",
+      "bu": "人事",
+      "layer": "Executor",
+      "desc": "業務委託・フリーランス採用プロセスと契約管理を担当",
+      "apis": [
+        "Claude/Notion"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hr_dept_intern_hiring",
+      "name": "インターン生採用",
+      "bu": "人事",
+      "layer": "Executor",
+      "desc": "インターン採用・研修プログラム・日次フォローを管理",
+      "apis": [
+        "Claude/Notion/Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "hr_orchestrator_main",
+      "name": "Orchestrator",
+      "bu": "全体",
+      "layer": "Orchestrator",
+      "desc": "タスク分解→エージェント割振り→実行→検証の自律分業",
+      "apis": [
+        "Claude"
+      ],
+      "status": "dev"
+    },
+    {
+      "canonical_id": "qa_review",
+      "name": "レビュー",
+      "bu": "品質管理",
+      "layer": "Executor",
+      "desc": "コード・ドキュメント品質チェック",
+      "apis": [
+        "GitHub"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "qa_design",
+      "name": "デザイン",
+      "bu": "品質管理",
+      "layer": "Executor",
+      "desc": "UI/UXガイドライン遵守チェック",
+      "apis": [
+        "—"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "qa_creative",
+      "name": "クリエイティブ",
+      "bu": "品質管理",
+      "layer": "Executor",
+      "desc": "コンテンツ品質・ブランド整合性チェック",
+      "apis": [
+        "—"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "qa_brand_mgr",
+      "name": "ブランドMGR",
+      "bu": "品質管理",
+      "layer": "Executor",
+      "desc": "ブランドガイドライン管理・配布",
+      "apis": [
+        "—"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "org_pulse",
+      "name": "チームパルス",
+      "bu": "組織管理",
+      "layer": "Executor",
+      "desc": "週次モチベーション・問題検知",
+      "apis": [
+        "Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "org_recruiting",
+      "name": "リクルーティング",
+      "bu": "組織管理",
+      "layer": "Executor",
+      "desc": "採用KPI・パイプライン管理",
+      "apis": [
+        "SF/GSheets"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "org_onboarding",
+      "name": "オンボーディング",
+      "bu": "組織管理",
+      "layer": "Executor",
+      "desc": "新メンバー研修・チェックリスト自動化",
+      "apis": [
+        "Notion"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "org_kpi",
+      "name": "KPI管理",
+      "bu": "組織管理",
+      "layer": "Executor",
+      "desc": "部署別KPI追跡・ダッシュボード自動更新",
+      "apis": [
+        "GSheets"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "exec_strategy",
+      "name": "戦略立案",
+      "bu": "経営戦略",
+      "layer": "Executor",
+      "desc": "戦略ブリーフ・OKR設計・意思決定支援",
+      "apis": [
+        "Claude"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "exec_ai_trend",
+      "name": "AI動向監視",
+      "bu": "経営戦略",
+      "layer": "Executor",
+      "desc": "最新AIモデル・競合インテリジェンス・週次ブリーフ",
+      "apis": [
+        "Claude"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "exec_pl",
+      "name": "P&L管理",
+      "bu": "経営戦略",
+      "layer": "Executor",
+      "desc": "売上・工数・利益率の分析・改善提案",
+      "apis": [
+        "Claude"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "exec_team_health",
+      "name": "チーム健全性",
+      "bu": "経営戦略",
+      "layer": "Executor",
+      "desc": "Health Score計算・離職リスク検出・週次レポート",
+      "apis": [
+        "Claude"
+      ],
+      "status": "active"
+    },
+    {
+      "canonical_id": "exec_approval",
+      "name": "承認",
+      "bu": "経営戦略",
+      "layer": "Executor",
+      "desc": "稟議・承認ワークフロー自動化",
+      "apis": [
+        "Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "mgmt_orchestrator",
+      "name": "経営管理オーケストレーター",
+      "bu": "経営管理",
+      "layer": "Orchestrator",
+      "desc": "【Orchestrator】経営管理部門全体を統括。戦略・経理・法務の3機能を調整・指揮",
+      "apis": [
+        "Claude/GSheets/Slack"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "mgmt_accounting",
+      "name": "経理",
+      "bu": "経営管理",
+      "layer": "Executor",
+      "desc": "月次P&L集計・経費申請処理・請求書管理・税務対応を自動化",
+      "apis": [
+        "Claude/GSheets"
+      ],
+      "status": "design"
+    },
+    {
+      "canonical_id": "mgmt_legal",
+      "name": "法務",
+      "bu": "経営管理",
+      "layer": "Executor",
+      "desc": "契約書レビュー・法令遵守チェック・規約管理・リスク評価を担当",
+      "apis": [
+        "Claude/Notion"
+      ],
+      "status": "design"
+    }
+  ]
+}

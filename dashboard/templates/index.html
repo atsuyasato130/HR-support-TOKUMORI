@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Empire Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/dist/vis-network.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/dist/dist/vis-network.min.css">
+<style>
+  :root {
+    --bg-primary:   #0d0d14;
+    --bg-card:      #1a1a2e;
+    --bg-card2:     #16213e;
+    --accent:       #7c3aed;
+    --accent-light: #a855f7;
+    --success:      #10b981;
+    --warning:      #f59e0b;
+    --danger:       #ef4444;
+    --text-primary: #e2e8f0;
+    --text-muted:   #64748b;
+    --border:       #2d2d4e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg-primary); color: var(--text-primary); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* ヘッダー */
+  header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; gap: 16px; height: 56px; position: sticky; top: 0; z-index: 100; }
+  header h1 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, var(--accent-light), #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header-sub { font-size: 12px; color: var(--text-muted); }
+
+  /* タブバー */
+  .tabs { display: flex; gap: 4px; padding: 12px 24px 0; border-bottom: 1px solid var(--border); background: var(--bg-card); overflow-x: auto; }
+  .tab { padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-muted); white-space: nowrap; border: 1px solid transparent; border-bottom: none; transition: all 0.2s; }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { background: var(--bg-primary); color: var(--accent-light); border-color: var(--border); }
+
+  /* コンテンツエリア */
+  .content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* KPIカード */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent-light)); }
+  .kpi-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+  .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  /* カード */
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  /* エージェントマップ */
+  .layer-section { margin-bottom: 20px; }
+  .layer-title { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .agent-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .agent-chip { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid; cursor: pointer; transition: all 0.15s; }
+  .agent-chip:hover { transform: scale(1.05); }
+  .agent-chip.稼働中 { background: rgba(16,185,129,0.15); border-color: var(--success); color: var(--success); }
+  .agent-chip.開発中 { background: rgba(245,158,11,0.15); border-color: var(--warning); color: var(--warning); }
+  .agent-chip.設計中 { background: rgba(100,116,139,0.15); border-color: var(--text-muted); color: var(--text-muted); }
+
+  /* バッジ */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-success { background: rgba(16,185,129,0.2); color: var(--success); }
+  .badge-warning { background: rgba(245,158,11,0.2); color: var(--warning); }
+  .badge-danger  { background: rgba(239,68,68,0.2); color: var(--danger); }
+  .badge-muted   { background: rgba(100,116,139,0.2); color: var(--text-muted); }
+  .badge-accent  { background: rgba(124,58,237,0.2); color: var(--accent-light); }
+
+  /* テーブル */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { background: var(--bg-card2); color: var(--text-muted); padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid rgba(45,45,78,0.5); vertical-align: middle; }
+  tr:hover td { background: rgba(124,58,237,0.04); }
+  tr.error-row td { background: rgba(239,68,68,0.06); }
+
+  /* フィルターバー */
+  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .filter-bar select, .filter-bar input { background: var(--bg-card2); border: 1px solid var(--border); color: var(--text-primary); padding: 7px 12px; border-radius: 8px; font-size: 13px; }
+  .filter-bar select:focus, .filter-bar input:focus { outline: none; border-color: var(--accent); }
+
+  /* ボタン */
+  .btn { padding: 7px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent-light); }
+  .btn-copy { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 3px 8px; font-size: 11px; }
+
+  /* エージェントカード（Agentsタブ） */
+  .agent-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .agent-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; transition: border-color 0.2s; }
+  .agent-card:hover { border-color: var(--accent); }
+  .agent-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .agent-card-name { font-weight: 600; font-size: 15px; }
+  .agent-card-id { font-size: 11px; color: var(--text-muted); font-family: monospace; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+  .agent-card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+  .agent-card-meta span { display: flex; align-items: center; gap: 4px; }
+
+  /* プログレスバー */
+  .progress-wrap { margin-bottom: 16px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+  .progress-fill.ph1 { background: var(--success); }
+  .progress-fill.ph2 { background: var(--warning); }
+  .progress-fill.ph3 { background: var(--accent); }
+  .progress-fill.ph4 { background: #06b6d4; }   /* cyan — 全社AI推進 */
+  .progress-fill.ph5 { background: #f43f5e; }   /* rose — 外販・SaaS */
+
+  /* フォーム */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 12px; color: var(--text-muted); }
+  .form-group input, .form-group select, .form-group textarea { background: var(--bg-card2); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 12px; border-radius: 8px; font-size: 13px; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
+  .form-group textarea { min-height: 72px; resize: vertical; }
+
+  /* サイドパネル */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; }
+  .overlay.open { display: block; }
+  .panel { position: fixed; right: 0; top: 0; bottom: 0; width: 480px; max-width: 100vw; background: var(--bg-card); border-left: 1px solid var(--border); z-index: 201; padding: 24px; overflow-y: auto; transform: translateX(100%); transition: transform 0.3s; }
+  .panel.open { transform: translateX(0); }
+  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .panel-close { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+
+  /* チャートラッパー */
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* マップ */
+  .map-canvas { width: 100%; height: 600px; background: #0d0d14; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .map-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+  .map-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .legend-line { width: 24px; height: 3px; flex-shrink: 0; }
+  .map-sub-tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+  .map-sub-tab { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 13px; color: var(--text-muted); background: transparent; }
+  .map-sub-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .map-tooltip { position: absolute; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 12px; pointer-events: none; z-index: 300; max-width: 260px; line-height: 1.6; }
+  .layout-btn-group { display: flex; gap: 4px; }
+  .layout-btn { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 12px; color: var(--text-muted); background: transparent; }
+  .layout-btn.active { background: var(--bg-card2); color: var(--text-primary); border-color: var(--accent); }
+
+  /* ユーティリティ */
+  .mt-16 { margin-top: 16px; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .text-muted { color: var(--text-muted); font-size: 12px; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Map CSS グリッド ── */
+  .map-grid { display: flex; flex-direction: column; gap: 0; }
+  .map-layer-band { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .map-layer-header-bar { display: flex; align-items: center; gap: 12px; padding: 12px 18px; cursor: pointer; background: var(--bg-card2); transition: background 0.15s; user-select: none; }
+  .map-layer-header-bar:hover { background: rgba(124,58,237,0.15); }
+  .map-layer-icon { font-size: 18px; }
+  .map-layer-title { font-size: 15px; font-weight: 700; flex: 1; }
+  .map-layer-count { font-size: 12px; color: var(--text-muted); }
+  .map-layer-arrow { font-size: 12px; color: var(--text-muted); transition: transform 0.2s; }
+  .map-layer-arrow.open { transform: rotate(90deg); }
+  .map-agent-grid-wrap { padding: 16px; background: var(--bg-primary); display: flex; flex-wrap: wrap; gap: 10px; }
+  .map-agent-tile { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 14px; min-width: 150px; max-width: 200px; cursor: pointer; transition: border-color 0.15s, transform 0.1s; position: relative; }
+  .map-agent-tile:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .map-agent-tile-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .map-agent-tile-name { font-size: 13px; font-weight: 600; }
+  .map-agent-tile-id { font-size: 10px; color: var(--text-muted); font-family: monospace; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .map-agent-tile-meta { font-size: 11px; color: var(--text-muted); }
+  .map-agent-tile.orchestrator { border-color: var(--accent); background: rgba(124,58,237,0.08); }
+  .map-connector { text-align: center; font-size: 12px; color: var(--accent); padding: 2px 0; }
+  /* drill-down */
+  .map-drill-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .map-drill-canvas { width: 100%; height: 500px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; }
+
+  /* ── 組織図 ── */
+  .org-chart { display: flex; flex-direction: column; gap: 20px; }
+  .org-bu-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .org-bu-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; font-weight: 700; font-size: 15px; border-bottom: 1px solid var(--border); }
+  .org-bu-body { display: flex; }
+  .org-division { flex: 1; padding: 14px 16px; border-right: 1px solid var(--border); }
+  .org-division:last-child { border-right: none; }
+  .org-div-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .org-roles { display: flex; flex-direction: column; gap: 8px; }
+  .org-role-card { background: var(--bg-secondary); border-radius: 8px; padding: 10px 12px; }
+  .org-role-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+  .org-employment { display: flex; flex-wrap: wrap; gap: 5px; }
+  .emp-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .emp-seishain  { background: #1e3a5f; color: #93c5fd; border: 1px solid #1d4ed8; }
+  .emp-gyomu     { background: #3b2500; color: #fbbf24; border: 1px solid #b45309; }
+  .emp-intern    { background: #0d2b1a; color: #6ee7b7; border: 1px solid #065f46; }
+
+  /* ── Security レベルマトリクス ── */
+  .sec-level-strip { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .sec-level-card { flex: 1; min-width: 140px; border-radius: 10px; padding: 12px 14px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+  .sec-level-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .sec-level-num { font-size: 22px; font-weight: 800; }
+  .sec-level-name { font-size: 13px; font-weight: 600; margin: 2px 0 6px; }
+  .sec-level-summary { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+  .sec-matrix-wrap { overflow-x: auto; }
+  .sec-matrix { border-collapse: collapse; font-size: 12px; min-width: 800px; width: 100%; }
+  .sec-matrix th { background: var(--bg-card2); padding: 10px 12px; text-align: center; border: 1px solid var(--border); font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .sec-matrix th.agent-col { text-align: left; min-width: 130px; }
+  .sec-matrix td { padding: 8px 12px; border: 1px solid var(--border); text-align: center; vertical-align: middle; }
+  .sec-matrix td.agent-info { text-align: left; }
+  .sec-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .sec-cell-ok   { background: rgba(16,185,129,0.12); }
+  .sec-cell-gap1 { background: rgba(245,158,11,0.12); }
+  .sec-cell-gap2 { background: rgba(239,68,68,0.10); }
+  .sec-cell-gap3 { background: rgba(239,68,68,0.18); }
+  .sec-bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .sec-bar { height: 6px; border-radius: 3px; background: var(--border); flex: 1; overflow: hidden; }
+  .sec-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+
+  /* ── ガイドタブ ── */
+  .guide-section { margin-bottom: 28px; }
+  .guide-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .level-def-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .level-def-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; border-left: 4px solid; }
+  .level-def-card-num { font-size: 24px; font-weight: 800; }
+  .level-def-card-name { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .level-def-card-rows { font-size: 12px; line-height: 2; }
+  .level-def-card-rows span { color: var(--text-muted); }
+  .uc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .uc-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .uc-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .uc-card-icon { font-size: 20px; }
+  .uc-card-name { font-weight: 600; font-size: 14px; }
+  .uc-req-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; color: white; margin-bottom: 8px; }
+  .uc-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+  @media (max-width: 600px) {
+    .content { padding: 12px; }
+    .panel { width: 100vw; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ AI Empire</h1>
+  <span class="header-sub">Agent Management Dashboard</span>
+  <span style="margin-left:auto;font-size:12px;color:var(--text-muted)" id="header-time"></span>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">🏠 Overview</div>
+  <div class="tab" onclick="switchTab('agents')">🤖 Agents</div>
+  <div class="tab" onclick="switchTab('roadmap')">🗺️ Roadmap</div>
+  <div class="tab" onclick="switchTab('activity')">📋 Activity</div>
+  <div class="tab" onclick="switchTab('intel')">💡 Intel</div>
+  <div class="tab" onclick="switchTab('security')">🔒 Security</div>
+  <div class="tab" onclick="switchTab('map')">🕸️ Map</div>
+  <div class="tab" onclick="switchTab('guide')">📖 ガイド</div>
+</div>
+
+<div class="content">
+
+<!-- ======== OVERVIEW ======== -->
+<div class="section active" id="sec-overview">
+  <div class="kpi-grid" id="kpi-cards">
+    <div class="kpi-card"><div class="kpi-label">🤖 稼働エージェント</div><div class="kpi-value" id="kpi-active">—</div><div class="kpi-sub" id="kpi-total"></div></div>
+    <div class="kpi-card"><div class="kpi-label">⏱️ 累計削減時間</div><div class="kpi-value" id="kpi-time">—</div><div class="kpi-sub">時間</div></div>
+    <div class="kpi-card"><div class="kpi-label">💰 ROI換算</div><div class="kpi-value" id="kpi-roi">—</div><div class="kpi-sub">円（3000円/h）</div></div>
+    <div class="kpi-card"><div class="kpi-label">📋 累計ログ</div><div class="kpi-value" id="kpi-logs">—</div><div class="kpi-sub">件</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗺️ Agent Status Map</div>
+    <div id="agent-map-wrap"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title flex-between">
+      <span>📊 部署別KPI入力</span>
+      <button class="btn btn-ghost" onclick="toggleKpiForm()">＋ 追加</button>
+    </div>
+    <div id="kpi-form-wrap" style="display:none;margin-bottom:16px;">
+      <div class="form-grid">
+        <div class="form-group"><label>BU</label><select id="f-bu"><option>HRsupport</option><option>RPO</option><option>Sales</option><option>人事</option><option>経営管理</option><option>経営戦略</option><option>共通</option></select></div>
+        <div class="form-group"><label>担当者</label><input id="f-op" placeholder="佐藤"></div>
+        <div class="form-group"><label>タスク名</label><input id="f-task" placeholder="面談後処理"></div>
+        <div class="form-group"><label>改善前(h)</label><input id="f-before" type="number" step="0.1" placeholder="2.0"></div>
+        <div class="form-group"><label>改善後(h)</label><input id="f-after" type="number" step="0.1" placeholder="0.2"></div>
+        <div class="form-group"><label>メモ</label><input id="f-note" placeholder="任意"></div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn btn-primary" onclick="submitKpi()">記録する</button></div>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>BU</th><th>タスク</th><th>担当</th><th>削減時間(h)</th><th>削減率</th><th>メモ</th><th>記録日</th></tr></thead>
+      <tbody id="kpi-table"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ======== AGENTS ======== -->
+<div class="section" id="sec-agents">
+  <div class="filter-bar">
+    <select id="ag-layer" onchange="loadAgents()">
+      <option value="">全Layer</option>
+      <option>全体</option><option>HRsupport</option><option>RPO</option><option>Sales</option><option>人事</option><option>経営管理</option><option>経営戦略</option><option>組織管理</option><option>品質管理</option>
+    </select>
+    <select id="ag-status" onchange="loadAgents()">
+      <option value="">全ステータス</option>
+      <option>稼働中</option><option>開発中</option><option>設計中</option>
+    </select>
+    <input id="ag-search" placeholder="🔍 検索..." oninput="filterAgentCards()" style="min-width:160px;">
+  </div>
+  <div class="agent-cards" id="agent-cards"></div>
+</div>
+
+<!-- ======== ROADMAP ======== -->
+<div class="section" id="sec-roadmap">
+  <div class="card">
+    <div class="card-title">フェーズ進捗</div>
+    <div id="phase-progress"></div>
+  </div>
+  <div id="roadmap-layers"></div>
+</div>
+
+<!-- ======== ACTIVITY ======== -->
+<div class="section" id="sec-activity">
+  <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px;">
+    <div class="kpi-card"><div class="kpi-label">📋 総更新数</div><div class="kpi-value" id="act-total">—</div></div>
+    <div class="kpi-card"><div class="kpi-label">📅 今月</div><div class="kpi-value" id="act-month">—</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title flex-between">
+      <span>更新ログ</span>
+      <button class="btn btn-ghost" onclick="toggleActForm()">＋ 追加</button>
+    </div>
+    <div id="act-form-wrap" style="display:none;margin-bottom:16px;">
+      <div class="form-grid">
+        <div class="form-group"><label>アイコン</label>
+          <select id="a-icon">
+            <option>🆕 新規作成</option><option>➕ 機能追加</option><option>🔧 修正</option>
+            <option>🎨 UI変更</option><option>🔄 更新</option><option>📋 設定変更</option>
+          </select>
+        </div>
+        <div class="form-group"><label>概要 *</label><input id="a-summary" placeholder="変更内容の1行要約"></div>
+        <div class="form-group"><label>変更ターゲット</label><input id="a-targets" placeholder="ファイル名/タブ名"></div>
+        <div class="form-group"><label>詳細</label><input id="a-details" placeholder="①変更A ②変更B"></div>
+      </div>
+      <div style="margin-top:12px;"><button class="btn btn-primary" onclick="submitActivity()">記録する</button></div>
+    </div>
+    <div class="filter-bar">
+      <input id="act-keyword" placeholder="🔍 キーワード検索..." oninput="loadActivity()" style="min-width:200px;">
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>日時</th><th>アイコン</th><th>概要</th><th>ターゲット</th><th>詳細</th><th>ステータス</th></tr></thead>
+      <tbody id="activity-table"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ======== INTEL ======== -->
+<div class="section" id="sec-intel">
+  <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:16px;">
+    <div class="kpi-card"><div class="kpi-label">✅ 成功率</div><div class="kpi-value" id="intel-sr">—</div><div class="kpi-sub">%</div></div>
+    <div class="kpi-card"><div class="kpi-label">⏱️ 平均削減時間</div><div class="kpi-value" id="intel-avg">—</div><div class="kpi-sub">h/件</div></div>
+    <div class="kpi-card"><div class="kpi-label">⏰ 総削減時間</div><div class="kpi-value" id="intel-total">—</div><div class="kpi-sub">h</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">エージェント別削減時間</div>
+    <div class="chart-wrap"><canvas id="intel-chart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">実行ログ</div>
+    <div class="filter-bar">
+      <select id="intel-bu" onchange="loadIntel()"><option value="">全BU</option><option>HRsupport</option><option>RPO</option><option>Sales</option><option>人事</option><option>経営管理</option><option>経営戦略</option><option>共通</option></select>
+      <select id="intel-result" onchange="loadIntel()"><option value="">全結果</option><option>SUCCESS</option><option>ERROR</option><option>SKIP</option></select>
+      <input id="intel-from" type="date" onchange="loadIntel()">
+      <input id="intel-to" type="date" onchange="loadIntel()">
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>日時</th><th>エージェント</th><th>BU</th><th>結果</th><th>削減時間(h)</th><th>タスク概要</th></tr></thead>
+      <tbody id="intel-table"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ======== SECURITY ======== -->
+<div class="section" id="sec-security">
+  <!-- レベル帯 -->
+  <div class="card">
+    <div class="card-title">🛡️ セキュリティレベル定義</div>
+    <div class="sec-level-strip" id="sec-level-strip"></div>
+  </div>
+
+  <!-- ユースケース要件 -->
+  <div class="card">
+    <div class="card-title">📋 ユースケース別必要レベル</div>
+    <div class="uc-grid" id="sec-usecase-grid"></div>
+  </div>
+
+  <!-- エージェント × ユースケース マトリクス -->
+  <div class="card">
+    <div class="card-title flex-between">
+      <span>📊 エージェント達成状況マトリクス</span>
+      <div style="font-size:12px;color:var(--text-muted);display:flex;gap:12px;align-items:center;">
+        <span><span style="background:rgba(16,185,129,0.2);padding:1px 6px;border-radius:4px;">✅</span> 達成</span>
+        <span><span style="background:rgba(245,158,11,0.2);padding:1px 6px;border-radius:4px;">△</span> 1段不足</span>
+        <span><span style="background:rgba(239,68,68,0.15);padding:1px 6px;border-radius:4px;">❌</span> 2段以上不足</span>
+      </div>
+    </div>
+    <div class="sec-matrix-wrap"><table class="sec-matrix" id="sec-matrix-table">
+      <thead id="sec-matrix-head"></thead>
+      <tbody id="sec-matrix-body"></tbody>
+    </table></div>
+  </div>
+
+  <!-- PII ポリシー -->
+  <div class="card">
+    <div class="card-title">🔏 PIIポリシー</div>
+    <div style="font-size:13px;line-height:1.8;color:var(--text-muted);">
+      <p><strong style="color:var(--text-primary);">PII定義:</strong> 氏名・連絡先・面談録画・評価・財務情報・採用候補者情報を個人識別可能情報（PII）として分類する。</p>
+      <p style="margin-top:8px;"><strong style="color:var(--text-primary);">取扱原則:</strong> PII を含む処理には最小権限の原則を適用。外部サービスへの書込みは必要最小限とし、Human-in-the-Loop が必要な処理には承認ステップを設ける。</p>
+      <p style="margin-top:8px;"><strong style="color:var(--text-primary);">ログ保持:</strong> 実行ログに PII をそのまま記録しない。要約・匿名化した形式で記録する。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ======== MAP ======== -->
+<div class="section" id="sec-map">
+  <div class="map-sub-tabs">
+    <button class="map-sub-tab active" onclick="switchMapView('hierarchy')">🏗️ 階層マップ</button>
+    <button class="map-sub-tab" onclick="switchMapView('business')">🌐 ビジネスマップ</button>
+    <button class="map-sub-tab" onclick="switchMapView('org')">🏢 組織図</button>
+  </div>
+
+  <!-- 階層マップ（CSS グリッド + ドリルダウン） -->
+  <div id="map-hierarchy-view">
+    <!-- 全体俯瞰 -->
+    <div id="map-overview-mode">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+        各レイヤー行をクリックすると詳細へ / エージェントカードをクリックで接続確認
+      </div>
+      <div class="map-legend" style="margin-bottom:14px;">
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981;"></div>稼働中</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f59e0b;"></div>開発中</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#334155;"></div>設計中</div>
+        <div class="legend-item" style="margin-left:12px;"><div class="legend-dot" style="background:#1e293b;border:1.5px dashed #94a3b8;"></div>人（メンバー）</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#334155;border:2px solid #94a3b8;clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);border-radius:0;"></div>グループ</div>
+        <div class="legend-item" style="margin-left:4px;"><div class="legend-line" style="background:transparent;border-top:2px dashed #e2e8f0;height:0;"></div>依頼</div>
+        <div class="legend-item"><div class="legend-line" style="background:#7c3aed;"></div>委譲（Orch→Agent）</div>
+        <div class="legend-item"><div class="legend-line" style="background:#10b981;"></div>トリガー</div>
+      </div>
+      <div class="map-grid" id="map-hierarchy-grid"></div>
+    </div>
+
+    <!-- ドリルダウン（Layer詳細） -->
+    <div id="map-drill-mode" style="display:none;">
+      <div class="map-drill-header">
+        <button class="btn btn-ghost" onclick="exitDrillDown()">← 全体へ戻る</button>
+        <div class="card-title" id="drill-layer-title" style="margin:0;"></div>
+        <div style="font-size:12px;color:var(--text-muted);">ホバーで接続強調 / クリックで詳細</div>
+      </div>
+      <div id="drill-canvas" class="map-drill-canvas"></div>
+      <div class="card mt-16" id="drill-detail" style="display:none;">
+        <div class="card-title" id="drill-detail-name"></div>
+        <div id="drill-detail-body" style="font-size:13px;line-height:1.8;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ビジネスマップ（同心円 vis-network） -->
+  <div id="map-business-view" style="display:none;">
+    <div class="map-controls">
+      <button class="btn btn-ghost" style="font-size:12px;" onclick="bizNetwork && bizNetwork.fit({animation:true})">↔️ 全体表示</button>
+      <span style="font-size:11px;color:var(--text-muted);">Claude ハブ → BU（第1リング）→ ツール（第2リング）の同心円配置</span>
+    </div>
+    <div class="map-legend" style="margin-bottom:12px;">
+      <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;"></div>Claude Hub</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3b82f6;border-radius:2px;"></div>BU</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#10b981;transform:rotate(45deg);border-radius:0;width:10px;height:10px;"></div>ツール</div>
+      <div class="legend-item" style="margin-left:8px;"><div class="legend-line" style="background:#10b981;"></div>read+write</div>
+      <div class="legend-item"><div class="legend-line" style="background:#3b82f6;border-top:2px dashed #3b82f6;height:0;"></div>read only</div>
+      <div class="legend-item"><div class="legend-line" style="background:#f59e0b;border-top:2px dashed #f59e0b;height:0;"></div>write only</div>
+    </div>
+    <div id="biz-map-canvas" class="map-canvas"></div>
+    <div class="card mt-16" id="map-biz-detail" style="display:none;">
+      <div class="card-title" id="map-biz-detail-name"></div>
+      <div id="map-biz-detail-body" style="font-size:13px;color:var(--text-muted);line-height:1.8;"></div>
+    </div>
+  </div>
+
+  <!-- 組織図（職種・雇用形態ツリー） -->
+  <div id="map-org-view" style="display:none;">
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+      事業部 → 部門 → 職種 → 雇用形態の組織階層。エージェントの権限グループ設計に使用。
+    </div>
+    <div id="org-chart-content" class="org-chart"></div>
+  </div>
+</div>
+
+<!-- ======== GUIDE ======== -->
+<div class="section" id="sec-guide">
+  <!-- 自律度レベル定義 -->
+  <div class="guide-section">
+    <div class="guide-title">⚡ エージェント自律度レベル</div>
+    <div class="level-def-grid">
+      <div class="level-def-card" style="border-left-color:#f59e0b;">
+        <div class="level-def-card-num" style="color:#f59e0b;">Lv 1</div>
+        <div class="level-def-card-name">対話型</div>
+        <div class="level-def-card-rows">
+          <div><span>動作:</span> 会話中のみ・毎回手動で起動が必要</div>
+          <div><span>代表例:</span> HRsupport 11体稼働中・全42体設計中含む</div>
+          <div><span>前提:</span> Claude Code / ブラウザから指示を与える</div>
+          <div><span>限界:</span> PC を閉じると停止。夜間・休日は無人運転不可</div>
+        </div>
+      </div>
+      <div class="level-def-card" style="border-left-color:#3b82f6;">
+        <div class="level-def-card-num" style="color:#3b82f6;">Lv 2</div>
+        <div class="level-def-card-name">自律型</div>
+        <div class="level-def-card-rows">
+          <div><span>動作:</span> 定期実行・スケジューラーで 24h 稼働</div>
+          <div><span>代表例:</span> exec_strategy（週次レポート想定）</div>
+          <div><span>前提:</span> PC 常時 ON または GAS/cron との組み合わせ</div>
+          <div><span>限界:</span> PC 電源 OFF で停止。VPS 不要だが常時 ON が必要</div>
+        </div>
+      </div>
+      <div class="level-def-card" style="border-left-color:#10b981;">
+        <div class="level-def-card-num" style="color:#10b981;">Lv 3</div>
+        <div class="level-def-card-name">常駐型</div>
+        <div class="level-def-card-rows">
+          <div><span>動作:</span> VPS 常駐・Webhook 即時反応・PC 電源不要</div>
+          <div><span>代表例:</span> hr_orchestrator_main（開発中）</div>
+          <div><span>前提:</span> VPS + 常駐プロセス管理（pm2 等）</div>
+          <div><span>限界:</span> インフラコスト・セキュリティ設計が必要</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- セキュリティレベル定義 -->
+  <div class="guide-section">
+    <div class="guide-title">🛡️ セキュリティレベル定義</div>
+    <div id="guide-sec-levels" class="level-def-grid"></div>
+  </div>
+
+  <!-- ユースケース早見表 -->
+  <div class="guide-section">
+    <div class="guide-title">📋 ユースケース別必要レベル早見表</div>
+    <div id="guide-usecases" class="uc-grid"></div>
+  </div>
+
+  <!-- チーム向け注意事項 -->
+  <div class="guide-section">
+    <div class="guide-title">👥 チームでの利用ルール</div>
+    <div class="card">
+      <div style="font-size:13px;line-height:2;color:var(--text-muted);">
+        <p><strong style="color:var(--text-primary);">🔐 APIキー管理:</strong> 各自の <code style="background:var(--bg-card2);padding:1px 6px;border-radius:4px;">.env</code> ファイルで管理。Slack・チャットへの貼り付け厳禁。</p>
+        <p><strong style="color:var(--text-primary);">📋 実行ログ記録:</strong> エージェント実行後は Intel タブへログを記録する（削減時間・BU・概要）。</p>
+        <p><strong style="color:var(--text-primary);">🔄 ステータス更新:</strong> エージェントの開発状況が変わったら Agents タブでステータスを更新する。</p>
+        <p><strong style="color:var(--text-primary);">📝 変更履歴:</strong> コード・設定変更は必ず Activity タブ または <code style="background:var(--bg-card2);padding:1px 6px;border-radius:4px;">dashboard_logger.py</code> で記録する。</p>
+        <p><strong style="color:var(--text-primary);">🛡️ セキュリティ:</strong> 新エージェントを追加したら Security タブのセキュリティレベルを設定する。</p>
+        <p><strong style="color:var(--text-primary);">⚠️ private/ 分離:</strong> <code style="background:var(--bg-card2);padding:1px 6px;border-radius:4px;">private/</code> 配下の活動・ログはこのダッシュボードに記録しない。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- サイドパネル（エージェント詳細） -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div class="panel" id="side-panel">
+  <div class="panel-header">
+    <div>
+      <div class="card-title" id="panel-name" style="margin-bottom:4px;"></div>
+      <div class="text-muted" id="panel-id"></div>
+    </div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div id="panel-body"></div>
+</div>
+
+<script>
+// ============================================================
+// ユーティリティ
+// ============================================================
+const $ = id => document.getElementById(id);
+const fmt = (v, d=1) => v == null ? '—' : Number(v).toFixed(d);
+const fmtJPY = v => v ? '¥' + Number(v).toLocaleString() : '—';
+
+function statusBadge(s) {
+  const map = { '稼働中': 'badge-success', '開発中': 'badge-warning', '設計中': 'badge-muted', '全体': 'badge-accent' };
+  return `<span class="badge ${map[s]||'badge-muted'}">${s||'—'}</span>`;
+}
+function riskBadge(r) {
+  const map = { '高': 'badge-danger', '中': 'badge-warning', '低': 'badge-success' };
+  return `<span class="badge ${map[r]||'badge-muted'}">${r||'—'}</span>`;
+}
+function resultBadge(r) {
+  const map = { 'SUCCESS': 'badge-success', 'ERROR': 'badge-danger', 'SKIP': 'badge-muted' };
+  return `<span class="badge ${map[r]||'badge-muted'}">${r}</span>`;
+}
+
+async function api(path) {
+  const r = await fetch('/api' + path);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function apiPost(path, body) {
+  const r = await fetch('/api' + path, {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function apiPut(path, body) {
+  const r = await fetch('/api' + path, {
+    method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+// ============================================================
+// タブ切替
+// ============================================================
+const tabLoaders = {
+  overview:  loadOverview,
+  agents:    loadAgents,
+  roadmap:   loadRoadmap,
+  activity:  loadActivity,
+  intel:     loadIntel,
+  security:  loadSecurity,
+  map:       loadMap,
+  guide:     loadGuide,
+};
+let currentTab = 'overview';
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const tabs = ['overview','agents','roadmap','activity','intel','security','map','guide'];
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  $('sec-' + name).classList.add('active');
+  currentTab = name;
+  tabLoaders[name]();
+}
+
+// ============================================================
+// OVERVIEW
+// ============================================================
+async function loadOverview() {
+  try {
+    const [kpi, map, kpiManual] = await Promise.all([
+      api('/overview/kpi'), api('/overview/agent_map'), api('/overview/kpi_manual')
+    ]);
+    $('kpi-active').textContent = kpi.active_agents;
+    $('kpi-total').textContent = `/ ${kpi.total_agents} 体`;
+    $('kpi-time').textContent = fmt(kpi.time_saved_total);
+    $('kpi-roi').textContent = fmtJPY(kpi.roi_jpy);
+    $('kpi-logs').textContent = kpi.log_count;
+    renderAgentMap(map);
+    renderKpiTable(kpiManual);
+  } catch(e) { console.error(e); }
+}
+
+function renderAgentMap(map) {
+  const wrap = $('agent-map-wrap');
+  wrap.innerHTML = Object.entries(map).map(([layer, agents]) => `
+    <div class="layer-section">
+      <div class="layer-title">${layer}</div>
+      <div class="agent-grid">
+        ${agents.map(a => `<span class="agent-chip ${a.status}" title="${a.description||''}">${a.name}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderKpiTable(rows) {
+  $('kpi-table').innerHTML = rows.length ? rows.map(r => `<tr>
+    <td>${r.bu||'—'}</td><td>${r.task_name||'—'}</td><td>${r.operator||'—'}</td>
+    <td>${fmt(r.time_saved)}</td><td>${fmt(r.reduction_rate)}%</td>
+    <td>${r.note||'—'}</td><td>${(r.recorded_at||'').slice(0,10)}</td>
+  </tr>`).join('') : '<tr><td colspan="7" style="color:var(--text-muted);text-align:center;padding:20px;">データなし</td></tr>';
+}
+
+function toggleKpiForm() {
+  const w = $('kpi-form-wrap');
+  w.style.display = w.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitKpi() {
+  const body = {
+    bu: $('f-bu').value, operator: $('f-op').value, task_name: $('f-task').value,
+    time_before: parseFloat($('f-before').value), time_after: parseFloat($('f-after').value),
+    note: $('f-note').value
+  };
+  if (!body.task_name || isNaN(body.time_before) || isNaN(body.time_after)) {
+    alert('タスク名・改善前・改善後は必須です'); return;
+  }
+  await apiPost('/overview/kpi_manual', body);
+  loadOverview();
+  toggleKpiForm();
+}
+
+// ============================================================
+// AGENTS
+// ============================================================
+let _allAgents = [];
+
+async function loadAgents() {
+  const layer = $('ag-layer').value;
+  const status = $('ag-status').value;
+  const params = new URLSearchParams();
+  if (layer) params.append('layer', layer);
+  if (status) params.append('status', status);
+  _allAgents = await api('/agents?' + params);
+  renderAgentCards(_allAgents);
+}
+
+function filterAgentCards() {
+  const q = $('ag-search').value.toLowerCase();
+  const filtered = q ? _allAgents.filter(a =>
+    (a.name||'').toLowerCase().includes(q) ||
+    (a.canonical_id||'').toLowerCase().includes(q) ||
+    (a.description||'').toLowerCase().includes(q)
+  ) : _allAgents;
+  renderAgentCards(filtered);
+}
+
+function renderAgentCards(agents) {
+  $('agent-cards').innerHTML = agents.map(a => `
+    <div class="agent-card">
+      <div class="agent-card-header">
+        <div>
+          <div class="agent-card-name">${a.name}</div>
+          <div class="agent-card-id">
+            <span style="font-size:10px;">${a.canonical_id}</span>
+            <button class="btn btn-copy" onclick="navigator.clipboard.writeText('${a.canonical_id}');this.textContent='✓'">copy</button>
+          </div>
+        </div>
+        ${statusBadge(a.status)}
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">${a.description||''}</div>
+      <div class="agent-card-meta">
+        <span>📦 ${a.layer||'—'}</span>
+        <span>⚡ ${a.level||'—'}</span>
+        <span>🔗 ${a.apis||'—'}</span>
+        <span>📊 ログ ${a.run_count_month||0}件</span>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+        <select class="btn btn-ghost" style="padding:4px 8px;font-size:12px;" onchange="updateAgentStatus('${a.canonical_id}', this.value)">
+          <option ${a.status==='稼働中'?'selected':''}>稼働中</option>
+          <option ${a.status==='開発中'?'selected':''}>開発中</option>
+          <option ${a.status==='設計中'?'selected':''}>設計中</option>
+        </select>
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="openAgentPanel('${a.canonical_id}', '${a.name}')">詳細 →</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function updateAgentStatus(id, status) {
+  await apiPut(`/agents/${id}/status`, {status});
+}
+
+async function openAgentPanel(id, name) {
+  $('panel-name').textContent = name;
+  $('panel-id').textContent = id;
+  $('panel-body').innerHTML = '<div class="spinner"></div>';
+  $('overlay').classList.add('open');
+  $('side-panel').classList.add('open');
+  const logs = await api(`/agents/${id}/logs?limit=30`);
+  $('panel-body').innerHTML = logs.length ? `
+    <table style="width:100%;font-size:12px;border-collapse:collapse;">
+      <thead><tr>
+        <th style="padding:6px 8px;background:var(--bg-card2);color:var(--text-muted);text-align:left;">日時</th>
+        <th style="padding:6px 8px;background:var(--bg-card2);color:var(--text-muted);text-align:left;">結果</th>
+        <th style="padding:6px 8px;background:var(--bg-card2);color:var(--text-muted);text-align:left;">削減(h)</th>
+        <th style="padding:6px 8px;background:var(--bg-card2);color:var(--text-muted);text-align:left;">概要</th>
+      </tr></thead>
+      <tbody>${logs.map(l => `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${(l.executed_at||'').slice(0,16)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${resultBadge(l.result)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${fmt(l.time_saved)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--border);">${l.task_summary||'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+  ` : '<p style="color:var(--text-muted);text-align:center;padding:32px;">実行ログなし</p>';
+}
+
+function closePanel() {
+  $('overlay').classList.remove('open');
+  $('side-panel').classList.remove('open');
+}
+
+// ============================================================
+// ROADMAP
+// ============================================================
+async function loadRoadmap() {
+  const [roadmap, progress] = await Promise.all([api('/roadmap'), api('/roadmap/progress')]);
+  renderProgress(progress);
+  renderRoadmapLayers(roadmap);
+}
+
+function renderProgress(progress) {
+  const phNames = {
+    1:'Phase 1 — HRsupport 稼働',
+    2:'Phase 2 — RPO・Sales・経営管理・経営戦略',
+    3:'Phase 3 — 人事・組織管理・品質管理',
+    4:'Phase 4 — 全社AI推進・チーム展開（〜4月末）',
+    5:'Phase 5 — 外販・SaaS化（〜6月）',
+  };
+  const phClass = {1:'ph1', 2:'ph2', 3:'ph3', 4:'ph4', 5:'ph5'};
+  $('phase-progress').innerHTML = progress.map(p => `
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>${phNames[p.phase]||'Phase '+p.phase}</span>
+        <span style="color:var(--text-muted);">${p.done}/${p.total} 完了 (${p.rate}%)</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${phClass[p.phase]||''}" style="width:${p.rate}%"></div></div>
+    </div>
+  `).join('');
+}
+
+function renderRoadmapLayers(roadmap) {
+  const phNames = {1:'Phase 1', 2:'Phase 2', 3:'Phase 3', 4:'Phase 4 — 全社AI推進', 5:'Phase 5 — 外販'};
+  $('roadmap-layers').innerHTML = Object.entries(roadmap).map(([phase, items]) => `
+    <div class="card">
+      <div class="card-title">${phNames[phase]||'Phase '+phase}</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>No</th><th>名前</th><th>Layer</th><th>ステータス</th><th>優先度</th><th>担当</th><th>稼働日</th><th>連携先</th></tr></thead>
+        <tbody>${items.map(r => `<tr>
+          <td>${r.agent_no||'—'}</td>
+          <td>${r.name}</td>
+          <td><span class="text-muted">${r.layer||'—'}</span></td>
+          <td>
+            <select style="background:var(--bg-card2);border:1px solid var(--border);color:var(--text-primary);padding:3px 6px;border-radius:6px;font-size:12px;"
+              onchange="apiPut('/roadmap/${r.id}/status',{status:this.value})">
+              ${['稼働中','開発中','設計中'].map(s=>`<option ${r.status===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </td>
+          <td>${r.priority||'—'}</td>
+          <td>${r.operator||'—'}</td>
+          <td>${r.launch_date||'—'}</td>
+          <td style="font-size:11px;color:var(--text-muted);">${r.integrations||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// ACTIVITY
+// ============================================================
+async function loadActivity() {
+  const kw = $('act-keyword').value;
+  const params = kw ? `?keyword=${encodeURIComponent(kw)}` : '';
+  const data = await api('/activity' + params);
+  $('act-total').textContent = data.total;
+  $('act-month').textContent = data.month_count;
+  $('activity-table').innerHTML = data.items.length ? data.items.map(r => `<tr>
+    <td style="color:var(--text-muted);">${r.id}</td>
+    <td>${(r.logged_at||'').slice(0,16)}</td>
+    <td>${r.icon||'—'}</td>
+    <td>${r.summary}</td>
+    <td style="font-size:12px;color:var(--text-muted);">${r.targets||'—'}</td>
+    <td style="font-size:12px;color:var(--text-muted);">${r.details||'—'}</td>
+    <td>${r.status||'—'}</td>
+  </tr>`).join('') : '<tr><td colspan="7" style="color:var(--text-muted);text-align:center;padding:20px;">データなし</td></tr>';
+}
+
+function toggleActForm() {
+  const w = $('act-form-wrap');
+  w.style.display = w.style.display === 'none' ? 'block' : 'none';
+}
+
+async function submitActivity() {
+  const summary = $('a-summary').value.trim();
+  if (!summary) { alert('概要は必須です'); return; }
+  await apiPost('/activity', {
+    icon: $('a-icon').value, summary,
+    targets: $('a-targets').value, details: $('a-details').value
+  });
+  loadActivity();
+  toggleActForm();
+  $('a-summary').value = ''; $('a-targets').value = ''; $('a-details').value = '';
+}
+
+// ============================================================
+// INTEL
+// ============================================================
+let intelChartInstance = null;
+
+async function loadIntel() {
+  const bu = $('intel-bu').value;
+  const result = $('intel-result').value;
+  const from = $('intel-from').value;
+  const to = $('intel-to').value;
+  const params = new URLSearchParams();
+  if (bu) params.append('bu', bu);
+  if (result) params.append('result', result);
+  if (from) params.append('date_from', from);
+  if (to) params.append('date_to', to);
+
+  const [logs, summary, byAgent] = await Promise.all([
+    api('/intel?' + params), api('/intel/summary'), api('/intel/by_agent')
+  ]);
+
+  $('intel-sr').textContent = fmt(summary.success_rate, 1);
+  $('intel-avg').textContent = fmt(summary.avg_time_saved, 2);
+  $('intel-total').textContent = fmt(summary.total_time_saved, 1);
+
+  renderIntelChart(byAgent);
+
+  $('intel-table').innerHTML = logs.length ? logs.map(l => `<tr class="${l.result==='ERROR'?'error-row':''}">
+    <td>${(l.executed_at||'').slice(0,16)}</td>
+    <td>${l.agent_name}</td>
+    <td>${l.bu||'—'}</td>
+    <td>${resultBadge(l.result)}</td>
+    <td>${fmt(l.time_saved, 2)}</td>
+    <td style="font-size:12px;color:var(--text-muted);">${l.task_summary||'—'}</td>
+  </tr>`).join('') : '<tr><td colspan="6" style="color:var(--text-muted);text-align:center;padding:20px;">データなし</td></tr>';
+}
+
+function renderIntelChart(byAgent) {
+  if (intelChartInstance) intelChartInstance.destroy();
+  const ctx = $('intel-chart').getContext('2d');
+  const top = byAgent.slice(0, 12);
+  intelChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(a => a.agent_name),
+      datasets: [{
+        label: '削減時間(h)',
+        data: top.map(a => a.total_saved || 0),
+        backgroundColor: 'rgba(124,58,237,0.6)',
+        borderColor: '#7c3aed',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#64748b' }, grid: { color: '#2d2d4e' } },
+        y: { ticks: { color: '#e2e8f0', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ============================================================
+// SECURITY — レベルマトリクス
+// ============================================================
+const _SEC_COLORS = ['#ef4444','#f59e0b','#3b82f6','#8b5cf6','#10b981'];
+const _SEC_NAMES  = ['Lv0 未対応','Lv1 基本','Lv2 標準','Lv3 強化','Lv4 Enterprise'];
+
+async function loadSecurity() {
+  const [matrix, levels, usecases] = await Promise.all([
+    api('/security/levels/matrix'),
+    api('/security/levels/definitions'),
+    api('/security/levels/usecases'),
+  ]);
+
+  // レベル帯
+  $('sec-level-strip').innerHTML = levels.map(l => `
+    <div class="sec-level-card" style="border-color:${l.badge_color}20;">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${l.badge_color};border-radius:10px 10px 0 0;"></div>
+      <div class="sec-level-num" style="color:${l.badge_color};">Lv${l.level}</div>
+      <div class="sec-level-name">${l.name}</div>
+      <div class="sec-level-summary">${l.summary}</div>
+    </div>
+  `).join('');
+
+  // ユースケース要件
+  $('sec-usecase-grid').innerHTML = usecases.map(u => `
+    <div class="uc-card">
+      <div class="uc-card-header">
+        <span class="uc-card-icon">${u.icon}</span>
+        <span class="uc-card-name">${u.usecase}</span>
+      </div>
+      <div class="uc-req-badge" style="background:${_SEC_COLORS[u.required_level]};">
+        ${_SEC_NAMES[u.required_level]} 以上が必要
+      </div>
+      <div class="uc-card-desc">${u.description}</div>
+    </div>
+  `).join('');
+
+  // マトリクスヘッダー
+  const ucs = matrix.usecases;
+  $('sec-matrix-head').innerHTML = `<tr>
+    <th class="agent-col">エージェント</th>
+    <th>Layer</th>
+    <th>現在Lv</th>
+    ${ucs.map(u => `<th>${u.icon}<br>${u.usecase}</th>`).join('')}
+  </tr>`;
+
+  // マトリクス本体（layer ごとにグループ行）
+  const byLayer = {};
+  matrix.agents.forEach(a => { (byLayer[a.layer||'—'] ??= []).push(a); });
+  const layerOrder = ['全体','HRsupport','経営戦略','組織管理','品質管理'];
+  const sorted = layerOrder.filter(l => byLayer[l]).concat(Object.keys(byLayer).filter(l => !layerOrder.includes(l)));
+
+  $('sec-matrix-body').innerHTML = sorted.flatMap(layer => {
+    const agents = byLayer[layer];
+    const header = `<tr><td colspan="${3 + ucs.length}" style="background:var(--bg-card2);font-weight:600;font-size:12px;color:var(--text-muted);padding:6px 12px;">${layer}</td></tr>`;
+    const rows = agents.map(ag => {
+      const cur = ag.current_security_level;
+      const barColor = _SEC_COLORS[cur] || '#475569';
+      const cells = ucs.map(u => {
+        const r = ag.usecases[u.usecase];
+        const gap = r.gap;
+        const cls = gap <= 0 ? 'sec-cell-ok' : gap === 1 ? 'sec-cell-gap1' : gap === 2 ? 'sec-cell-gap2' : 'sec-cell-gap3';
+        const icon = gap <= 0 ? '✅' : gap === 1 ? `<span style="color:var(--warning)">△-${gap}</span>` : `<span style="color:var(--danger)">❌-${gap}</span>`;
+        return `<td class="${cls}">${icon}</td>`;
+      }).join('');
+      return `<tr>
+        <td class="agent-info">
+          <strong>${ag.name}</strong>
+          <div style="font-size:10px;color:var(--text-muted);font-family:monospace;">${ag.canonical_id}</div>
+        </td>
+        <td style="font-size:11px;color:var(--text-muted);">${ag.layer||'—'}</td>
+        <td>
+          <div class="sec-bar-wrap">
+            <div class="sec-bar"><div class="sec-bar-fill" style="width:${cur*25}%;background:${barColor};"></div></div>
+            <span style="font-size:11px;font-weight:700;color:${barColor};">${cur}</span>
+          </div>
+        </td>
+        ${cells}
+      </tr>`;
+    }).join('');
+    return [header, rows];
+  }).join('');
+}
+
+// ============================================================
+// MAP — 階層マップ + ビジネスマップ
+// ============================================================
+let bizNetwork       = null;
+let drillNetwork     = null;
+let _agentGraphData  = null;
+let _bizGraphData    = null;
+let currentMapView   = 'hierarchy';
+
+async function loadMap() {
+  if (currentMapView === 'hierarchy') await initHierarchyMap();
+  else await initBizGraph();
+}
+
+function switchMapView(view) {
+  currentMapView = view;
+  const views = ['hierarchy', 'business', 'org'];
+  document.querySelectorAll('.map-sub-tab').forEach((t, i) => {
+    t.classList.toggle('active', views[i] === view);
+  });
+  $('map-hierarchy-view').style.display = view === 'hierarchy' ? 'block' : 'none';
+  $('map-business-view').style.display  = view === 'business'  ? 'block' : 'none';
+  $('map-org-view').style.display       = view === 'org'       ? 'block' : 'none';
+  if (view === 'hierarchy') initHierarchyMap();
+  if (view === 'business')  initBizGraph();
+  if (view === 'org')       renderOrgChart();
+}
+
+// ── 組織図（職種・雇用形態ツリー） ─────────────────────────
+const ORG_STRUCTURE = [
+  {
+    label: 'HRsupport', icon: '🤖', color: '#10b981',
+    divisions: [
+      {
+        label: '中途支援',
+        roles: [
+          { label: 'CA', employment: ['社員', '業務委託'] },
+          { label: 'RA', employment: ['社員', '業務委託'] },
+        ],
+      },
+      {
+        label: '新卒支援',
+        roles: [
+          { label: 'CA', employment: ['社員', '業務委託'] },
+          { label: 'LG', employment: ['インターン生'] },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'RPO', icon: '📋', color: '#3b82f6',
+    divisions: [
+      {
+        label: null,
+        roles: [
+          { label: 'CS', employment: ['社員', '業務委託'] },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Sales', icon: '💼', color: '#ef4444',
+    divisions: [
+      {
+        label: null,
+        roles: [
+          { label: 'FS', employment: ['社員', '業務委託'] },
+          { label: 'IS', employment: ['社員', '業務委託'] },
+        ],
+      },
+    ],
+  },
+  {
+    label: '人事', icon: '👥', color: '#06b6d4',
+    divisions: [
+      {
+        label: null,
+        roles: [
+          { label: '社員採用',       employment: [] },
+          { label: '業務委託採用',   employment: [] },
+          { label: 'インターン生採用', employment: [] },
+        ],
+      },
+    ],
+  },
+  {
+    label: '経営管理', icon: '🏦', color: '#f59e0b',
+    divisions: [
+      {
+        label: null,
+        roles: [
+          { label: '経理', employment: [] },
+          { label: '法務', employment: [] },
+        ],
+      },
+    ],
+  },
+];
+
+const _EMP_CLASS = { '社員': 'emp-seishain', '業務委託': 'emp-gyomu', 'インターン生': 'emp-intern' };
+
+let _orgRendered = false;
+function renderOrgChart() {
+  if (_orgRendered) return;
+  _orgRendered = true;
+  const container = $('org-chart-content');
+  container.innerHTML = '';
+
+  ORG_STRUCTURE.forEach(bu => {
+    const card = document.createElement('div');
+    card.className = 'org-bu-card';
+    card.style.borderTop = `3px solid ${bu.color}`;
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'org-bu-header';
+    hdr.style.background = bu.color + '18';
+    hdr.innerHTML = `<span>${bu.icon}</span><span style="color:${bu.color}">${bu.label}</span>`;
+    card.appendChild(hdr);
+
+    // Body (divisions)
+    const body = document.createElement('div');
+    body.className = 'org-bu-body';
+
+    bu.divisions.forEach(div => {
+      const divEl = document.createElement('div');
+      divEl.className = 'org-division';
+
+      if (div.label) {
+        const lbl = document.createElement('div');
+        lbl.className = 'org-div-label';
+        lbl.textContent = div.label;
+        divEl.appendChild(lbl);
+      }
+
+      const rolesEl = document.createElement('div');
+      rolesEl.className = 'org-roles';
+
+      div.roles.forEach(role => {
+        const rc = document.createElement('div');
+        rc.className = 'org-role-card';
+
+        const rn = document.createElement('div');
+        rn.className = 'org-role-name';
+        rn.textContent = role.label;
+        rc.appendChild(rn);
+
+        if (role.employment.length > 0) {
+          const empEl = document.createElement('div');
+          empEl.className = 'org-employment';
+          role.employment.forEach(e => {
+            const b = document.createElement('span');
+            b.className = `emp-badge ${_EMP_CLASS[e] || ''}`;
+            b.textContent = e;
+            empEl.appendChild(b);
+          });
+          rc.appendChild(empEl);
+        }
+        rolesEl.appendChild(rc);
+      });
+
+      divEl.appendChild(rolesEl);
+      body.appendChild(divEl);
+    });
+
+    card.appendChild(body);
+    container.appendChild(card);
+  });
+}
+
+// ── 階層マップ（CSS グリッド） ────────────────────────────
+const LAYER_META = {
+  '全体':     { icon: '⚡', color: '#7c3aed' },
+  'HRsupport':{ icon: '🤖', color: '#10b981' },
+  'RPO':      { icon: '📋', color: '#3b82f6' },
+  'Sales':    { icon: '💼', color: '#ef4444' },
+  '人事':     { icon: '👥', color: '#06b6d4' },
+  '経営管理': { icon: '🏦', color: '#f59e0b' },
+  '経営戦略': { icon: '📊', color: '#eab308' },
+  '組織管理': { icon: '🏢', color: '#6366f1' },
+  '品質管理': { icon: '✅', color: '#8b5cf6' },
+};
+const LAYER_ORDER = ['全体','HRsupport','RPO','Sales','人事','経営管理','経営戦略','組織管理','品質管理'];
+
+async function initHierarchyMap() {
+  if (!_agentGraphData) _agentGraphData = await api('/map/agent_graph');
+  renderHierarchyGrid(_agentGraphData);
+}
+
+function renderHierarchyGrid(data) {
+  const byLayer = {};
+  data.nodes.filter(n => !n.id.startsWith('_lbl_')).forEach(n => {
+    (byLayer[n.layer] ??= []).push(n);
+  });
+
+  const layers = LAYER_ORDER.filter(l => byLayer[l]);
+  const grid = $('map-hierarchy-grid');
+  grid.innerHTML = '';
+
+  layers.forEach((layer, li) => {
+    const meta  = LAYER_META[layer] || { icon: '📦', color: '#64748b' };
+    const agents = byLayer[layer];
+    const orgBu  = ORG_STRUCTURE.find(bu => bu.label === layer);
+
+    if (li > 0) {
+      const conn = document.createElement('div');
+      conn.className = 'map-connector';
+      conn.innerHTML = `<span style="color:${meta.color};font-size:18px;">↓</span>`;
+      grid.appendChild(conn);
+    }
+
+    const band = document.createElement('div');
+    band.className = 'map-layer-band';
+    band.style.borderColor = meta.color + '60';
+
+    // ── ヘッダー（クリックでdrillDown）──
+    const header = document.createElement('div');
+    header.className = 'map-layer-header-bar';
+    header.style.borderBottom = `1px solid ${meta.color}40`;
+    header.innerHTML = `
+      <span class="map-layer-icon">${meta.icon}</span>
+      <span class="map-layer-title" style="color:${meta.color};">${layer}</span>
+      <span class="map-layer-count">${agents.length}体</span>
+      <span class="map-layer-arrow">› エージェント詳細</span>
+    `;
+    header.onclick = () => drillDown(layer, meta);
+    band.appendChild(header);
+
+    if (orgBu) {
+      // ── 組織構造ビュー（部門→職種→雇用形態） ──
+      const body = document.createElement('div');
+      body.style.cssText = 'display:flex;';
+
+      orgBu.divisions.forEach((div, di) => {
+        const divEl = document.createElement('div');
+        divEl.className = 'org-division';
+        if (di < orgBu.divisions.length - 1)
+          divEl.style.borderRight = '1px solid var(--border)';
+
+        if (div.label) {
+          const lbl = document.createElement('div');
+          lbl.className = 'org-div-label';
+          lbl.textContent = div.label;
+          divEl.appendChild(lbl);
+        }
+
+        const rolesEl = document.createElement('div');
+        rolesEl.className = 'org-roles';
+
+        div.roles.forEach(role => {
+          const rc = document.createElement('div');
+          rc.className = 'org-role-card';
+
+          const rn = document.createElement('div');
+          rn.className = 'org-role-name';
+          rn.textContent = role.label;
+          rc.appendChild(rn);
+
+          if (role.employment.length > 0) {
+            const empEl = document.createElement('div');
+            empEl.className = 'org-employment';
+            role.employment.forEach(e => {
+              const b = document.createElement('span');
+              b.className = `emp-badge ${_EMP_CLASS[e] || ''}`;
+              b.textContent = e;
+              empEl.appendChild(b);
+            });
+            rc.appendChild(empEl);
+          }
+          rolesEl.appendChild(rc);
+        });
+
+        divEl.appendChild(rolesEl);
+        body.appendChild(divEl);
+      });
+
+      band.appendChild(body);
+    } else {
+      // ── 従来のエージェントタイル表示 ──
+      const wrap = document.createElement('div');
+      wrap.className = 'map-agent-grid-wrap';
+
+      agents.forEach(ag => {
+        const tile = document.createElement('div');
+        tile.className = 'map-agent-tile' + (ag.id.includes('orchestrator') ? ' orchestrator' : '');
+        const statusDot = { '稼働中': '#10b981', '開発中': '#f59e0b', '設計中': '#334155' }[ag.status] || '#334155';
+        tile.innerHTML = `
+          <div class="map-agent-tile-top">
+            <span class="map-agent-tile-name">${ag.label}</span>
+            <span class="sec-dot" style="background:${statusDot};margin-top:2px;"></span>
+          </div>
+          <div class="map-agent-tile-id">${ag.id}</div>
+          <div class="map-agent-tile-meta">${ag.apis || '—'}</div>
+        `;
+        tile.onclick = (e) => { e.stopPropagation(); showAgentTileDetail(ag, data); };
+        wrap.appendChild(tile);
+      });
+      band.appendChild(wrap);
+    }
+
+    grid.appendChild(band);
+  });
+}
+
+function showAgentTileDetail(ag, data) {
+  const connOut = data.edges.filter(e => e.from === ag.id).map(e => {
+    const to = data.nodes.find(n => n.id === e.to);
+    return `<div style="padding:3px 0;">→ <b>${to?.label||e.to}</b> <span style="color:${_edgeColor(e.edge_type)};font-size:11px;">[${e.edge_type}]</span> ${e.label||''}</div>`;
+  });
+  const connIn = data.edges.filter(e => e.to === ag.id).map(e => {
+    const fr = data.nodes.find(n => n.id === e.from);
+    return `<div style="padding:3px 0;color:var(--text-muted);">← <b>${fr?.label||e.from}</b> <span style="font-size:11px;">[${e.edge_type}]</span></div>`;
+  });
+  $('drill-detail').style.display = 'block';
+  $('drill-detail-name').innerHTML = `${ag.label} <span class="badge ${_statusBadgeClass(ag.status)}">${ag.status}</span>`;
+  $('drill-detail-body').innerHTML = `
+    <code style="background:var(--bg-card2);padding:2px 8px;border-radius:6px;font-size:11px;">${ag.id}</code>
+    <span style="margin-left:8px;font-size:12px;color:var(--text-muted);">Layer: ${ag.layer} | APIs: ${ag.apis||'—'}</span>
+    <div style="margin-top:10px;">${connOut.join('')}${connIn.join('')}</div>
+  `;
+}
+
+// ドリルダウン
+let _drillLayer = null;
+function drillDown(layer, meta) {
+  _drillLayer = layer;
+  $('map-overview-mode').style.display = 'none';
+  $('map-drill-mode').style.display    = 'block';
+  $('drill-layer-title').innerHTML = `<span style="color:${meta.color};">${meta.icon} ${layer}</span>`;
+  $('drill-detail').style.display  = 'none';
+  renderDrillGraph(layer);
+}
+
+function exitDrillDown() {
+  $('map-overview-mode').style.display = 'block';
+  $('map-drill-mode').style.display    = 'none';
+  if (drillNetwork) { drillNetwork.destroy(); drillNetwork = null; }
+}
+
+function renderDrillGraph(layer) {
+  if (!_agentGraphData) return;
+  const data     = _agentGraphData;
+  const layerIds = new Set(data.nodes.filter(n => n.layer === layer).map(n => n.id));
+  // メンバーノードのうちこの layer に対応するものも含める
+  const memberInLayer = data.nodes.filter(n => n.id.startsWith('_mem_') && n.layer === layer);
+  memberInLayer.forEach(n => layerIds.add(n.id));
+  const nodes    = data.nodes.filter(n => layerIds.has(n.id));
+  const edges    = data.edges.filter(e => layerIds.has(e.from) && layerIds.has(e.to));
+
+  // ドリルダウン用の固定配置（横並び）
+  const cols    = Math.ceil(Math.sqrt(nodes.length));
+  const spacing = 220;
+  const posNodes = nodes.map((n, i) => ({
+    ...n,
+    x: (i % cols) * spacing - (cols - 1) * spacing / 2,
+    y: Math.floor(i / cols) * 160,
+    physics: false,
+    font: { ...n.font, size: 14 },
+    size: 22,
+  }));
+
+  const nodesDS = new vis.DataSet(posNodes);
+  const edgesDS = new vis.DataSet(edges);
+  if (drillNetwork) drillNetwork.destroy();
+  drillNetwork = new vis.Network($('drill-canvas'), { nodes: nodesDS, edges: edgesDS }, _VIS_COMMON);
+  attachHoverDim(drillNetwork, nodesDS, edgesDS, posNodes, edges);
+  drillNetwork.on('click', ({ nodes: clicked }) => {
+    if (!clicked.length) return;
+    const ag = posNodes.find(n => n.id === clicked[0]);
+    if (ag) showAgentTileDetail(ag, data);
+  });
+  setTimeout(() => drillNetwork.fit({ animation: true }), 100);
+}
+
+// ── 共通 vis-network オプション ───────────────────────────
+const _VIS_COMMON = {
+  physics:     { enabled: false },          // 座標固定
+  interaction: { hover: true, tooltipDelay: 150, multiselect: false, zoomView: true },
+  nodes: {
+    borderWidth: 1.5,
+    shadow: { enabled: true, color: 'rgba(0,0,0,0.55)', size: 10, x: 2, y: 2 },
+  },
+  edges: {
+    hoverWidth: 2.5,
+    selectionWidth: 3,
+  },
+};
+
+// ── ホバー時に隣接ノードだけ強調 ─────────────────────────
+function attachHoverDim(network, nodesDS, edgesDS, allNodes, allEdges) {
+  network.on('hoverNode', ({ node }) => {
+    const adj = new Set([node]);
+    allEdges.forEach(e => {
+      if (e.from === node) adj.add(e.to);
+      if (e.to   === node) adj.add(e.from);
+    });
+    const update = allNodes
+      .filter(n => !n.id.startsWith('_lbl_'))
+      .map(n => ({
+        id: n.id,
+        opacity: adj.has(n.id) ? 1 : 0.15,
+      }));
+    nodesDS.update(update);
+  });
+  network.on('blurNode', () => {
+    nodesDS.update(allNodes.map(n => ({ id: n.id, opacity: 1 })));
+  });
+}
+
+// ── エージェント依存グラフ ────────────────────────────────
+async function initAgentGraph() {
+  if (!_agentGraphData) _agentGraphData = await api('/map/agent_graph');
+  renderAgentGraph(_agentGraphData);
+}
+
+function renderAgentGraph(data) {
+  const container  = $('agent-map-canvas');
+  const layerFilter = $('map-filter-layer').value;
+  const edgeFilter  = $('map-filter-edge').value;
+
+  let nodes = data.nodes;
+  let edges = data.edges;
+
+  if (layerFilter) {
+    const allowed = new Set(nodes.filter(n => n.layer === layerFilter || n.id.startsWith('_lbl_')).map(n => n.id));
+    nodes = nodes.filter(n => allowed.has(n.id));
+    edges = edges.filter(e => allowed.has(e.from) && allowed.has(e.to));
+  }
+  if (edgeFilter) edges = edges.filter(e => e.edge_type === edgeFilter);
+
+  const nodesDS = new vis.DataSet(nodes);
+  const edgesDS = new vis.DataSet(edges);
+
+  if (agentNetwork) agentNetwork.destroy();
+  agentNetwork = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, _VIS_COMMON);
+
+  attachHoverDim(agentNetwork, nodesDS, edgesDS, nodes, edges);
+
+  agentNetwork.on('click', ({ nodes: clicked }) => {
+    if (!clicked.length) return;
+    const nodeId = clicked[0];
+    if (nodeId.startsWith('_lbl_')) return;
+    const node = data.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const connOut = data.edges
+      .filter(e => e.from === nodeId)
+      .map(e => {
+        const to = data.nodes.find(n => n.id === e.to);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+          <span style="color:${_edgeColor(e.edge_type)};font-size:18px;">→</span>
+          <b>${to?.label || e.to}</b>
+          <span class="badge badge-muted" style="font-size:10px;">${e.edge_type}</span>
+          <span style="color:var(--text-muted);font-size:11px;">${e.label||''}</span>
+        </div>`;
+      });
+    const connIn = data.edges
+      .filter(e => e.to === nodeId)
+      .map(e => {
+        const fr = data.nodes.find(n => n.id === e.from);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+          <span style="color:var(--text-muted);font-size:18px;">←</span>
+          <b>${fr?.label || e.from}</b>
+          <span class="badge badge-muted" style="font-size:10px;">${e.edge_type}</span>
+          <span style="color:var(--text-muted);font-size:11px;">${e.label||''}</span>
+        </div>`;
+      });
+
+    $('map-agent-detail').style.display = 'block';
+    $('map-detail-name').innerHTML = `${node.label} <span class="badge ${_statusBadgeClass(node.status)}">${node.status}</span>`;
+    $('map-detail-body').innerHTML = `
+      <div style="margin-bottom:10px;">
+        <code style="background:var(--bg-card2);padding:3px 8px;border-radius:6px;font-size:11px;">${nodeId}</code>
+        &nbsp;<span style="color:var(--text-muted);font-size:12px;">Layer: ${node.layer}</span>
+        &nbsp;<span style="color:var(--text-muted);font-size:12px;">APIs: ${node.apis||'—'}</span>
+      </div>
+      ${connOut.length ? `<div style="margin-bottom:6px;font-size:12px;color:var(--text-muted);">呼び出す (${connOut.length})</div>${connOut.join('')}` : ''}
+      ${connIn.length  ? `<div style="margin-top:10px;margin-bottom:6px;font-size:12px;color:var(--text-muted);">呼ばれる (${connIn.length})</div>${connIn.join('')}` : ''}
+      ${!connOut.length && !connIn.length ? '<span style="color:var(--text-muted);">接続なし</span>' : ''}
+    `;
+  });
+
+  setTimeout(() => agentNetwork.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } }), 100);
+}
+
+function _edgeColor(type) {
+  return { orchestrates: '#7c3aed', triggers: '#10b981', reads: '#3b82f6', writes: '#f59e0b' }[type] || '#64748b';
+}
+function _statusBadgeClass(s) {
+  return { '稼働中': 'badge-success', '開発中': 'badge-warning', '設計中': 'badge-muted' }[s] || 'badge-muted';
+}
+
+// ── ガイドタブ ────────────────────────────────────────────
+async function loadGuide() {
+  const [levels, usecases] = await Promise.all([
+    api('/security/levels/definitions'),
+    api('/security/levels/usecases'),
+  ]);
+
+  $('guide-sec-levels').innerHTML = levels.map(l => `
+    <div class="level-def-card" style="border-left-color:${l.badge_color};">
+      <div class="level-def-card-num" style="color:${l.badge_color};">Lv ${l.level}</div>
+      <div class="level-def-card-name">${l.name}</div>
+      <div class="level-def-card-rows">
+        <div><span>概要:</span> ${l.summary}</div>
+        <div><span>認証:</span> ${l.auth}</div>
+        <div><span>ログ:</span> ${l.logging}</div>
+        <div><span>暗号化:</span> ${l.encryption}</div>
+        <div><span>PII:</span> ${l.pii}</div>
+        <div><span>監査:</span> ${l.audit}</div>
+      </div>
+    </div>
+  `).join('');
+
+  $('guide-usecases').innerHTML = usecases.map(u => `
+    <div class="uc-card">
+      <div class="uc-card-header">
+        <span class="uc-card-icon">${u.icon}</span>
+        <span class="uc-card-name">${u.usecase}</span>
+      </div>
+      <div class="uc-req-badge" style="background:${_SEC_COLORS[u.required_level]};">
+        Lv${u.required_level} 以上が必要
+      </div>
+      <div class="uc-card-desc">${u.description}</div>
+    </div>
+  `).join('');
+}
+
+// ── ビジネスマップ（同心円固定） ──────────────────────────
+async function initBizGraph() {
+  if (!_bizGraphData) _bizGraphData = await api('/map/business_map');
+  renderBizGraph(_bizGraphData);
+}
+
+function renderBizGraph(data) {
+  const container = $('biz-map-canvas');
+  const nodesDS   = new vis.DataSet(data.nodes);
+  const edgesDS   = new vis.DataSet(data.edges);
+
+  if (bizNetwork) bizNetwork.destroy();
+  bizNetwork = new vis.Network(container, { nodes: nodesDS, edges: edgesDS }, _VIS_COMMON);
+
+  attachHoverDim(bizNetwork, nodesDS, edgesDS, data.nodes, data.edges);
+
+  bizNetwork.on('click', ({ nodes: clicked }) => {
+    if (!clicked.length) return;
+    const nodeId = clicked[0];
+    const node   = data.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const connEdges = data.edges.filter(e => e.from === nodeId || e.to === nodeId);
+    const items = connEdges.map(e => {
+      const otherId = e.from === nodeId ? e.to : e.from;
+      const other   = data.nodes.find(n => n.id === otherId);
+      const dir     = e.from === nodeId ? '→' : '←';
+      return `<div style="padding:5px 0;border-bottom:1px solid var(--border);">
+        <span style="color:var(--text-muted);">${dir}</span>
+        <b style="margin:0 6px;">${other?.label || otherId}</b>
+        ${e.label ? `<span class="badge badge-muted" style="font-size:10px;">${e.label}</span>` : ''}
+        ${e.title ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${e.title}</div>` : ''}
+      </div>`;
+    });
+
+    $('map-biz-detail').style.display = 'block';
+    $('map-biz-detail-name').textContent = node.label.replace('⚡ ', '');
+    $('map-biz-detail-body').innerHTML = `
+      <div style="color:var(--text-muted);font-size:12px;margin-bottom:12px;">種別: ${node.node_type||'—'}</div>
+      ${items.join('') || '<span style="color:var(--text-muted);">接続なし</span>'}
+    `;
+  });
+
+  setTimeout(() => bizNetwork.fit({ animation: { duration: 500, easingFunction: 'easeInOutQuad' } }), 100);
+}
+
+function setBusinessLayout() {}
+
+// ============================================================
+// 時計・初期化
+// ============================================================
+function updateClock() {
+  $('header-time').textContent = new Date().toLocaleString('ja-JP');
+}
+updateClock();
+setInterval(updateClock, 1000);
+loadOverview();
+</script>
+</body>
+</html>

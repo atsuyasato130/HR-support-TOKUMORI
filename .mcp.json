@@ -3,7 +3,24 @@
     "hr-support": {
       "command": "python3",
       "args": [
-        "/Users/atsuyasato/Claude AI/AI agent（HRsupport事業）/business/career_advisor/integrations/mcp_salesforce_notion.py"
+        "/Users/atsuyasato/Claude AI/ai-empire/agents/hr_support/integrations/mcp_salesforce_notion.py"
+      ]
+    },
+    "salesforce-dx": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@salesforce/mcp",
+        "--orgs", "prod",
+        "--toolsets", "orgs,data",
+        "--allow-non-ga-tools"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
       ]
     }
   }

@@ -1,4 +1,4 @@
-# Claude Code 全体指示
+# Claude Code 全体指示 — Tokumori（2026-03-30 更新）
 
 ## Update_Log 自動記録（最重要）
 
@@ -16,31 +16,15 @@
 
 ### Update_Logへの記録方法（必ずこの方法を使うこと）
 
-スプレッドシートID: `1g8PzcuPuUTTdO-kcSh4niuwfLw6d8zN8JQMZCrmyuH8`
-
 **⚠️ `append_row` は禁止。必ず `dashboard_logger.py` を使うこと。**
-（append_rowは末尾追加のため順番が崩れる。insert_rowsで Row5 に挿入する設計）
 
-```python
-# 正しい記録方法（セッション内のPythonコードから呼ぶ）
-import sys
-sys.path.insert(0, "utils")
-from dashboard_logger import log_update
+```bash
+# ai-empire/ ルートから実行（アイコン・summary・targets・details の順）
+python3 utils/dashboard_logger.py "🔧 修正" "依頼内容の1〜2行要約" "変更ファイル/タブ名" "①変更点A ②変更点B"
 
-log_update(
-    icon="🔧 修正",           # 🆕新規作成/➕機能追加/🔧修正/🎨UI変更/🔄更新/📋設定変更
-    summary="依頼内容の1〜2行要約",
-    targets="変更したファイル/タブ名",
-    details="①変更点A ②変更点B ③変更点C",
-    # status はデフォルト "✅ 完了"
-)
+# アイコン: 🆕新規作成 ➕機能追加 🔧修正 🎨UI変更 🔄更新 📋設定変更
+# status を変えたい場合: --status "⚠️ 確認中"
 ```
-
-`dashboard_logger.py` が自動で行う処理:
-1. 連番（前の最大値+1）を計算
-2. 日時（YYYY/MM/DD HH:MM）を自動付与
-3. **Row5 に insert_rows**（最新エントリが常に先頭に来る）
-4. **Row2 統計バー**（総更新回数・最終更新日時）を自動更新
 
 ### 対象外（ログ不要）
 - 情報検索・質問応答のみ（ファイル・外部サービスへの変更を伴わない）
@@ -49,77 +33,56 @@ log_update(
 
 ---
 
-## knowledge/ 動的同期義務（2026-03-17 追加）
+## knowledge/ 動的同期義務
 
-`business/career_advisor/knowledge/` はシステムの「生きた設計書」である。
-**コード・設定・エージェント・スプレッドシートへの変更のたびに、必ず対応するknowledgeファイルを更新せよ。**
-
-### 更新トリガー早見表
-
-| 変更内容 | 更新対象 |
-|----------|---------|
-| エージェント追加・変更 | `knowledge/architecture_master.md` §1・§8 + `knowledge/AGENT_MANIFEST.json` |
-| SFフィールド追加・変更 | `knowledge/architecture_master.md` §2 |
-| MCPツール追加 | `knowledge/architecture_master.md` §6 + `settings.local.json` |
-| アーキテクチャ変更 | `knowledge/architecture_master.md` 該当セクション |
-| ディレクトリ構造変更 | `CLAUDE.md` + `STATUS_REPORT.md` + `memory/project_directory_structure.md` |
-
-### knowledge/ ファイル一覧
-
-| ファイル | 内容 |
-|---------|------|
-| `architecture_master.md` | **最上位行動指針**・全秘伝仕様・SF独自フィールド・並列処理設計 |
-| `AGENT_MANIFEST.json` | エージェント正規登録台帳（11体） |
-| `system_diagram.md` | システムダイアグラム・処理フロー |
-| `gems_student_interview.md` | 就活対策AI秘伝システムプロンプト（3モード×3レベル） |
-| `slack_post_draft.md` | Slack向けシステム説明ドキュメント |
+`knowledge/` はシステムの「生きた設計書」。コード・設定・エージェント変更時に更新する。
+詳細ルール → `agents/CLAUDE.md` を参照。
 
 ---
 
 ## 情報の絶対隔離ルール（最重要・例外なし）
 
-### ディレクトリ構造と隔離原則（2026-03-17 更新）
+### ディレクトリ構造と隔離原則（2026-03-30 更新）
 
-```
-/Users/atsuyasato/Claude AI/
-├── private/                    ← プライベート領域（リポジトリ外・同階層に物理分離）
-│   └── life_supporter/         ← 個人用エージェント（business/との接触禁止）
-└── AI agent（HRsupport事業）/   ← ビジネス専用リポジトリ（private/は存在しない）
-    ├── business/
-    │   ├── career_advisor/ ← エージェント本体
-    │   └── tokumo/         ← Webアプリ
-    ├── STATUS_REPORT.md
-    └── CLAUDE.md
-```
+詳細構造は `~/.claude/projects/-Users-atsuyasato-Claude-AI/memory/project_directory_structure.md` を参照。
+
+**絶対原則:**
+- `private/`（`/Users/atsuyasato/Claude AI/private/`）は **ai-empire/ と完全分離**（リポジトリ外）
+- `life_supporter` エージェントと ai-empire/ の接触禁止
 
 **`private/` はリポジトリ外（`/Users/atsuyasato/Claude AI/private/`）に物理分離済み。**
-このリポジトリ内に `private/` フォルダは存在しない。
 
-### 1. ダッシュボードへの反映禁止
-以下の情報は、いかなる場合も統合管理ダッシュボード（Googleスプレッドシート）に反映させてはならない:
+### ダッシュボードへの反映禁止
+以下の情報は、いかなる場合もダッシュボードに反映させてはならない:
 - `/Users/atsuyasato/Claude AI/private/` 配下での活動・作業内容
-- `life_supporter` エージェントの実行ログ
-- ライフサポーターとの対話内容
+- `life_supporter` エージェントの実行ログ・対話内容
 
-Update_Log・Main_Map・Agent_Registry 等すべてのタブが対象。
+### ログの物理的隔離
+- `private/` 配下エージェントのログは `/Users/atsuyasato/Claude AI/private/logs/` にのみ保存
+- `ai-empire/` 側の共通ログファイルへの出力を禁止
 
-### 2. ログの物理的隔離
-- `private/` 配下エージェントのログは `/Users/atsuyasato/Claude AI/private/logs/` 内のローカルファイルにのみ保存
-- `business/` 側の Supabase ログテーブルや共通ログファイルへの出力を禁止
+---
 
-### 3. RAG・コンテキストの非干渉
-- `business/` 側エージェントは `/Users/atsuyasato/private/` の内容をコンテキストとして読み取ってはならない
-- ファイル読み込み時に `private/` ディレクトリがスコープに入らないよう厳格に制限する
+## Tokumori アーキテクチャ（2026-03-30）
+
+### 3層レベル
+| Level | 状態 | 特徴 |
+|-------|------|------|
+| Level 1（対話型） | 運用中 | 会話中のみ動作・毎回指示が必要 |
+| Level 2（自律型） | 運用中 | 定期実行・24時間稼働（PC常時ON） |
+| Level 3（常駐型） | 開発中 | VPS常駐・Webhook即時反応・PC電源不要 |
+
+### 開発ドメイン
+現在開発中の機能はデフォルトで **HRsupport** 向け。RPO側は明示指定時のみ。
 
 ---
 
 ## ダッシュボード自動更新ルール
 
 機能追加・エージェント変更・ステータス変化のたびに以下を更新:
-- Main_Map → ロジックツリーを更新
-- Agent_Registry → エージェント行を更新
-- Integration_Matrix → 外部API追加・削除時
-- Security_Governance → セキュリティリスク変化時
+- Roadmap → フェーズ進捗を更新
+- Agent Registry → エージェント行を更新
+- Project Board → タスクステータスを更新
 
 ダッシュボード: `https://docs.google.com/spreadsheets/d/1g8PzcuPuUTTdO-kcSh4niuwfLw6d8zN8JQMZCrmyuH8/edit`
 
@@ -133,20 +96,17 @@ Update_Log・Main_Map・Agent_Registry 等すべてのタブが対象。
 
 ---
 
-## プロジェクト固有情報
+## 主要コマンド
 
-### ディレクトリ（完全最新版・2026-03-17）
-- **エージェント本体**: `business/career_advisor/`（11体稼働）
-- **Webアプリ**: `business/tokumo/`（Next.js + Supabase）
-- **プライベート**: `/Users/atsuyasato/Claude AI/private/`（リポジトリの外・同階層・非接触）
-- **ダッシュボード**: [統合管理スプレッドシート](https://docs.google.com/spreadsheets/d/1g8PzcuPuUTTdO-kcSh4niuwfLw6d8zN8JQMZCrmyuH8/edit)
+```bash
+# HRsupportエージェント起動
+cd agents/hr_support && python3 main.py
 
-### 注意事項
-- `Claude AI/web/` は `.next/` ビルドキャッシュのみで実体なし → 削除推奨
-- エージェント起動: `cd business/career_advisor && python3 main.py`
+# Update_Log記録（ai-empire/ ルートで実行）
+python3 utils/dashboard_logger.py "ICON" "SUMMARY" "TARGETS" "DETAILS"
+```
 
 詳細はメモリファイル（`~/.claude/projects/-Users-atsuyasato-Claude-AI/memory/`）を参照:
 - `MEMORY.md` — 全体インデックス
-- `project_tokumo.md` — TOKUMOアプリ詳細
-- `feedback_dashboard_update.md` — ダッシュボード更新ルール
+- `project_directory_structure.md` — ディレクトリ構造
 - `feedback_reporting_style.md` — 戦略AI報告スタイル

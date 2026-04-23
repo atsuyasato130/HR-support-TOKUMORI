@@ -1,31 +1,40 @@
 # ============================================================
-# TOKUMO OS — .gitignore
+# Tokumori Business Platform (TBP) — .gitignore
+# GitHub にアップロードしてはならないファイル
 # ============================================================
 
-# Secrets & 環境変数
+# 🚨 聖域: privateディレクトリ
+/private/
+
+# 環境変数・認証情報
 .env
 .env.*
 .env.local
 .env.production
 .env.development
-business/career_advisor/config/.env
-business/career_advisor/config/credentials.json
-business/career_advisor/config/token.json
-business/career_advisor/config/processed_email_ids.json
+**/credentials.json
+**/client_secret*.json
+**/token.json
+**/processed_email_ids.json
 
-# Logs
-business/career_advisor/logs/
-logs/
+# 実行ログ
 *.log
+logs/
+**/logs/
+
+# データベース
+*.db
+*.sqlite
+*.sqlite3
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
 .venv/
 venv/
-.Python
 .pytest_cache/
 .coverage
 htmlcov/
@@ -44,5 +53,9 @@ node_modules/
 .vscode/
 .idea/
 
-# Private（リポジトリ外に物理分離済みだが念のため）
-private/
+# 一時ファイル
+_tmp_rename/
+*.removed
+
+# hr_support は独立リポ (hr-support-bot) として管理
+agents/hr_support/
