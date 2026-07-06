@@ -4,7 +4,7 @@
 # 初回のみ: python3 dashboard/migrate.py を先に実行してください
 
 set -e
-cd "/Users/atsuyasato/Claude AI/ai-empire"
+cd "/Users/atsuyasato130/Claude AI/ai-empire"
 
 # DB未初期化の場合は自動セットアップ
 if [ ! -f "dashboard/empire.db" ]; then

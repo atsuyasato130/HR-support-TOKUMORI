@@ -1,0 +1,2306 @@
+<template>
+    <div class="gkd-root">
+        <!-- ヘッダー -->
+        <div class="gkd-header">
+            <div class="gkd-header-left">
+                <div class="gkd-logo-dot"></div>
+                <span class="gkd-title">HRsupport数値管理 <span class="gkd-title-sub">全体KPI</span> <span class="gkd-title-sub" style="font-size:10px;opacity:0.5">v2026.05.11-8</span></span>
+            </div>
+            <div class="gkd-filters">
+                <div class="gkd-filter-group">
+                    <span class="gkd-filter-label">年度</span>
+                    <lightning-combobox label="年度" variant="label-hidden" value={selectedYear}
+                        options={yearOptions} onchange={handleYearChange} class="gkd-filter-select">
+                    </lightning-combobox>
+                </div>
+                <div class="gkd-filter-group">
+                    <span class="gkd-filter-label">卒年</span>
+                    <lightning-combobox label="卒年" variant="label-hidden" value={selectedGradYear}
+                        options={gradYearOptions} onchange={handleGradYearChange} class="gkd-filter-select">
+                    </lightning-combobox>
+                </div>
+                <div class="gkd-filter-group">
+                    <span class="gkd-filter-label">月</span>
+                    <lightning-combobox label="月" variant="label-hidden" value={selectedMonth}
+                        options={monthOptions} onchange={handleMonthChange} class="gkd-filter-select">
+                    </lightning-combobox>
+                </div>
+            </div>
+        </div>
+
+        <!-- 業種切替トグル -->
+        <div class="gkd-biz-toggle">
+            <button class={bizReferralBtnClass} data-line="referral" onclick={handleBizToggle}>紹介</button>
+            <button class={bizSoukyakuBtnClass} data-line="soukyaku" onclick={handleBizToggle}>送客</button>
+        </div>
+
+        <template if:true={isLoading}>
+            <div class="gkd-loading">
+                <lightning-spinner alternative-text="読み込み中" size="medium"></lightning-spinner>
+            </div>
+        </template>
+
+        <template if:false={isLoading}>
+            <template if:true={isReferral}>
+            <!-- 期間切替セグメント（年度 | H1 | H2 | Q1〜Q4） -->
+            <div class="gkd-period-bar">
+                <span class="gkd-period-label">期間</span>
+                <template for:each={summaryPeriodOptions} for:item="opt">
+                    <button key={opt.key} class={opt.cls} data-period={opt.key} onclick={handleSummaryPeriodChange}>{opt.label}</button>
+                </template>
+            </div>
+
+            <!-- 固定サマリーバー（常時表示） -->
+            <div class="gkd-fixed-summary">
+                <div class="gkd-fsum-item">
+                    <span class="gkd-fsum-label">紹介人数</span>
+                    <span class="gkd-fsum-value">{totalStudentCount}<span class="gkd-fsum-unit">人</span></span>
+                </div>
+                <div class="gkd-fsum-item">
+                    <span class="gkd-fsum-label">面談学生</span>
+                    <span class="gkd-fsum-value">{totalMeetings}<span class="gkd-fsum-unit">人</span></span>
+                </div>
+                <div class="gkd-fsum-arrow">
+                    <span class="gkd-fsum-rate">{meetingToReferralPct}</span>
+                    <span class="gkd-fsum-arrow-icon">→</span>
+                </div>
+                <div class="gkd-fsum-item">
+                    <span class="gkd-fsum-label">求人紹介数</span>
+                    <span class="gkd-fsum-value">{totalReferrals}<span class="gkd-fsum-unit">件</span></span>
+                </div>
+                <div class="gkd-fsum-arrow">
+                    <span class="gkd-fsum-rate">{referralToAcceptedPct}</span>
+                    <span class="gkd-fsum-arrow-icon">→</span>
+                </div>
+                <div class="gkd-fsum-item">
+                    <span class="gkd-fsum-label">内定承諾</span>
+                    <span class="gkd-fsum-value">{totalAccepted}<span class="gkd-fsum-unit">件</span></span>
+                </div>
+                <div class="gkd-fsum-divider"></div>
+                <div class="gkd-fsum-item gkd-fsum-green">
+                    <span class="gkd-fsum-label">実売上</span>
+                    <span class="gkd-fsum-value gkd-green">{totalRevenueDisplay}</span>
+                </div>
+                <div class="gkd-fsum-item gkd-fsum-green">
+                    <span class="gkd-fsum-label">計上売上</span>
+                    <span class="gkd-fsum-value gkd-green">{totalBookedRevenueDisplay}</span>
+                </div>
+                <div class="gkd-fsum-item gkd-fsum-amber">
+                    <span class="gkd-fsum-label">加重ヨミ</span>
+                    <span class="gkd-fsum-value gkd-amber">{totalWeightedYomiDisplay}</span>
+                </div>
+            </div>
+
+            <!-- タブナビ -->
+            <div class="gkd-tabnav">
+                <button class={tab0Class} onclick={handleTab} data-tab="0">年度サマリー</button>
+                <button class={tab1Class} onclick={handleTab} data-tab="1">月別トレンド</button>
+                <button class={tab4Class} onclick={handleTab} data-tab="4">母集団分析</button>
+                <button class={tab2Class} onclick={handleTab} data-tab="2">担当者別 KPI</button>
+                <button class={tab5Class} onclick={handleTab} data-tab="5">紹介者別 KPI</button>
+                <button class={tab3Class} onclick={handleTab} data-tab="3">企業別 KPI</button>
+                <button class={tab8Class} onclick={handleTab} data-tab="8">企業別進捗</button>
+                <button class={tab6Class} onclick={handleTab} data-tab="6">CA別実績ヨミ管理</button>
+                <button class={tab9Class} onclick={handleTab} data-tab="9">学生別売上</button>
+                <button class={tab7Class} onclick={handleTab} data-tab="7">チームヨミ管理</button>
+            </div>
+
+            <!-- Tab 0: 年度サマリー -->
+            <template if:true={isTab0}>
+                <!-- ★ サマリーKPIバー（統一スタイル） -->
+                <div class="gkd-byname-kpi-bar">
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">未着手案件</div>
+                        <div class="gkd-bkpi-value gkd-bkpi-red">{staleStudentDisplay}</div>
+                        <div class="gkd-bkpi-sub">14日以上面談なし</div>
+                    </div>
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">平均承諾サイクル</div>
+                        <div class="gkd-bkpi-value">{avgAcceptCycleDisplay}<span class="gkd-bkpi-unit">日</span></div>
+                        <div class="gkd-bkpi-sub">紹介→承諾の期間</div>
+                    </div>
+                    <div class="gkd-bkpi-sep"></div>
+                    <div class="gkd-bkpi-card" style="flex:2; min-width:280px">
+                        <div class="gkd-bkpi-label">ヨミ確度別 進行中件数</div>
+                        <div class="gkd-yomi-stack">
+                            <template for:each={yomiAccuracyBars} for:item="seg">
+                                <div key={seg.label} class={seg.cls} style={seg.style} title={seg.title}>
+                                    <span class="gkd-yomi-seg-label">{seg.label}</span>
+                                    <span class="gkd-yomi-seg-cnt">{seg.count}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- クォーター別 -->
+                <div class="gkd-panel" style="margin-bottom:12px;">
+                    <div class="gkd-panel-title">クォーター別実績（6月始まり）</div>
+                    <template if:true={hasQuarterlyData}>
+                        <div class="gkd-quarter-row">
+                            <template for:each={quarterlyCards} for:item="q">
+                                <div key={q.label} class="gkd-quarter-card">
+                                    <div class="gkd-quarter-label">{q.label} <span class="gkd-quarter-period">{q.period}</span></div>
+                                    <div class="gkd-quarter-value">{q.referrals}<span class="gkd-unit">件</span></div>
+                                    <div class="gkd-quarter-sub">面談 {q.meetings}件</div>
+                                    <div class="gkd-quarter-sub">承諾 {q.accepted}件</div>
+                                    <div class="gkd-quarter-sub muted">面→紹 {q.meetingToReferralRate}</div>
+                                    <div class="gkd-quarter-sub gkd-green">{q.revenueDisplay}</div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:false={hasQuarterlyData}>
+                        <div class="gkd-empty">年度を選択するとクォーター別データが表示されます</div>
+                    </template>
+                    <!-- H1/H2 半期集計 -->
+                    <template if:true={hasQuarterlyData}>
+                        <div class="gkd-half-row">
+                            <template for:each={halfYearCards} for:item="h">
+                                <div key={h.label} class="gkd-half-card">
+                                    <div class="gkd-half-label">{h.label} <span class="gkd-quarter-period">{h.period}</span></div>
+                                    <div class="gkd-half-value gkd-green">{h.revenueDisplay}</div>
+                                    <div class="gkd-quarter-sub">紹介 {h.referrals}件 / 承諾 {h.accepted}件</div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <!-- 年度比較（前年データがある場合のみ） -->
+                    <template if:true={yoyCompare}>
+                        <template if:true={yoyCompare.hasPrev}>
+                            <div class="gkd-yoy-panel">
+                                <div class="gkd-yoy-title">年度比較</div>
+                                <div class="gkd-yoy-row">
+                                    <span class="gkd-yoy-cur-label">{yoyCompare.curLabel}</span>
+                                    <div class="gkd-yoy-bar-wrap">
+                                        <div class="gkd-yoy-bar gkd-yoy-bar--cur" style={yoyCompare.curBarStyle}></div>
+                                    </div>
+                                    <span class="gkd-yoy-rev">{yoyCompare.curRevDisplay}</span>
+                                    <span class={yoyCompare.growthClass}>{yoyCompare.growthDisplay}</span>
+                                </div>
+                                <div class="gkd-yoy-row">
+                                    <span class="gkd-yoy-cur-label">{yoyCompare.prevLabel}</span>
+                                    <div class="gkd-yoy-bar-wrap">
+                                        <div class="gkd-yoy-bar gkd-yoy-bar--prev" style={yoyCompare.prevBarStyle}></div>
+                                    </div>
+                                    <span class="gkd-yoy-rev">{yoyCompare.prevRevDisplay}</span>
+                                </div>
+                                <div class="gkd-yoy-sub">紹介数: {yoyCompare.curRefDisplay} (前年: {yoyCompare.prevRefDisplay})</div>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+                <!-- 選考ファネル + ドーナツチャート -->
+                <div class="gkd-panel" style="margin-bottom:12px;">
+                    <div class="gkd-panel-title">選考ファネル（累積件数）</div>
+                    <template if:true={hasFunnelData}>
+                        <div class="gkd-funnel-donut-row">
+                            <!-- ファネルバー -->
+                            <div class="gkd-funnel-wrap" style="flex:1">
+                                <template for:each={funnelStages} for:item="stage">
+                                    <div key={stage.label} class="gkd-funnel-row">
+                                        <div class="gkd-funnel-label">{stage.label}</div>
+                                        <div class="gkd-funnel-track">
+                                            <div class="gkd-funnel-fill" style={stage.barStyle}></div>
+                                        </div>
+                                        <div class="gkd-funnel-count">{stage.count}<span class="gkd-pct"> ({stage.pct}%)</span></div>
+                                    </div>
+                                </template>
+                            </div>
+                            <!-- ドーナツチャート -->
+                            <div class="gkd-donut-wrap">
+                                <svg viewBox="0 0 180 180" class="gkd-donut-svg">
+                                    <circle cx="90" cy="90" r="60" fill="none" stroke="#eef0f3" stroke-width="28"></circle>
+                                    <template for:each={donutSegments} for:item="seg">
+                                        <circle key={seg.label} cx="90" cy="90" r="60"
+                                            fill="none"
+                                            stroke={seg.color}
+                                            stroke-width="28"
+                                            stroke-dasharray={seg.dash}
+                                            stroke-dashoffset={seg.offset}
+                                            transform="rotate(-90 90 90)">
+                                        </circle>
+                                    </template>
+                                </svg>
+                                <div class="gkd-donut-legend">
+                                    <template for:each={donutSegments} for:item="seg">
+                                        <div key={seg.label} class="gkd-donut-legend-item">
+                                            <span class="gkd-donut-dot" style={seg.dotStyle}></span>
+                                            <span class="gkd-donut-lbl">{seg.label}</span>
+                                            <span class="gkd-donut-pct">{seg.pct}%</span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <template if:false={hasFunnelData}>
+                        <div class="gkd-empty">データなし</div>
+                    </template>
+                </div>
+                <!-- 月別実売上トレンド グラフ -->
+                <div class="gkd-panel" style="margin-bottom:12px;">
+                    <div class="gkd-panel-title">月別実売上トレンド</div>
+                    <template if:true={hasMonthlyData}>
+                        <div class="gkd-chart-wrap">
+                            <svg viewBox="0 0 620 130" class="gkd-svg">
+                                <template for:each={trendRevSvgGridLines} for:item="line">
+                                    <line key={line.key} x1="44" y1={line.y} x2="610" y2={line.y} stroke="#dde2e8" stroke-width="1"></line>
+                                    <text key={line.key} x="40" y={line.labelY} text-anchor="end" fill="#9ea5ad" font-size="8">{line.label}</text>
+                                </template>
+                                <template for:each={trendRevBarItems} for:item="bar">
+                                    <g key={bar.key}>
+                                        <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} fill="#2e844a" rx="2" opacity="0.8"></rect>
+                                        <template if:true={bar.hasRev}>
+                                            <text x={bar.centerX} y={bar.countY} text-anchor="middle" fill="#1c5c30" font-size="7">{bar.revLabel}</text>
+                                        </template>
+                                        <text x={bar.centerX} y="126" text-anchor="middle" fill="#9ea5ad" font-size="8">{bar.label}</text>
+                                    </g>
+                                </template>
+                            </svg>
+                        </div>
+                    </template>
+                    <template if:false={hasMonthlyData}>
+                        <div class="gkd-empty">月別データなし</div>
+                    </template>
+                </div>
+
+                <!-- CA別 加重ヨミ TOP5 (バーチャート版) -->
+                <div class="gkd-panel">
+                    <div class="gkd-panel-title">CA別 加重ヨミ TOP5</div>
+                    <template if:true={hasConsultantData}>
+                        <div class="gkd-top5-wrap">
+                            <template for:each={consultantTop5} for:item="row">
+                                <div key={row.name} class="gkd-top5-row">
+                                    <div class={row.rankClass}>{row.rank}</div>
+                                    <div class="gkd-top5-name">{row.name}</div>
+                                    <div class="gkd-top5-bar-track">
+                                        <div class="gkd-top5-bar-fill" style={row.barStyle}></div>
+                                    </div>
+                                    <div class="gkd-top5-meta">紹{row.referrals} / 承{row.accepted}</div>
+                                    <div class="gkd-top5-amount gkd-green">{row.weightedYomiDisplay}</div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template if:false={hasConsultantData}>
+                        <div class="gkd-empty">データなし</div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Tab 1: 月別トレンド -->
+            <template if:true={isTab1}>
+                <template if:true={hasMonthlyData}>
+                    <!-- 紹介数・面談数グラフ（2列） -->
+                    <div class="gkd-two-col" style="margin-bottom:12px;gap:12px;">
+                        <div class="gkd-panel">
+                            <div class="gkd-panel-title">月別紹介数</div>
+                            <div class="gkd-chart-wrap">
+                                <svg viewBox="0 0 620 140" class="gkd-svg">
+                                    <template for:each={trendGridLines} for:item="line">
+                                        <line key={line.y} x1="44" y1={line.y} x2="610" y2={line.y} stroke="#dde2e8" stroke-width="1"></line>
+                                        <text key={line.label} x="40" y={line.labelY} text-anchor="end" fill="#9ea5ad" font-size="9">{line.value}</text>
+                                    </template>
+                                    <template for:each={trendBarItems} for:item="bar">
+                                        <g key={bar.label}>
+                                            <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} fill="#0176d3" rx="2" opacity="0.85"></rect>
+                                            <text x={bar.centerX} y={bar.countY} text-anchor="middle" fill="#0058a3" font-size="8">{bar.count}</text>
+                                            <text x={bar.centerX} y="136" text-anchor="middle" fill="#9ea5ad" font-size="8">{bar.label}</text>
+                                        </g>
+                                    </template>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="gkd-panel">
+                            <div class="gkd-panel-title">月別面談数</div>
+                            <div class="gkd-chart-wrap">
+                                <svg viewBox="0 0 620 140" class="gkd-svg">
+                                    <template for:each={trendMeetingGridLines} for:item="line">
+                                        <line key={line.key} x1="44" y1={line.y} x2="610" y2={line.y} stroke="#dde2e8" stroke-width="1"></line>
+                                        <text key={line.key} x="40" y={line.labelY} text-anchor="end" fill="#9ea5ad" font-size="9">{line.value}</text>
+                                    </template>
+                                    <template for:each={trendMeetingBarItems} for:item="bar">
+                                        <g key={bar.key}>
+                                            <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} fill="#9b59b6" rx="2" opacity="0.8"></rect>
+                                            <template if:true={bar.meetings}>
+                                                <text x={bar.centerX} y={bar.countY} text-anchor="middle" fill="#6c3483" font-size="8">{bar.meetings}</text>
+                                            </template>
+                                            <text x={bar.centerX} y="136" text-anchor="middle" fill="#9ea5ad" font-size="8">{bar.label}</text>
+                                        </g>
+                                    </template>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 月別売上グラフ -->
+                    <div class="gkd-panel" style="margin-bottom:12px;">
+                        <div class="gkd-panel-title">月別承諾売上</div>
+                        <div class="gkd-chart-wrap">
+                            <svg viewBox="0 0 620 130" class="gkd-svg">
+                                <template for:each={trendRevSvgGridLines} for:item="line">
+                                    <line key={line.key} x1="44" y1={line.y} x2="610" y2={line.y} stroke="#dde2e8" stroke-width="1"></line>
+                                    <text key={line.key} x="40" y={line.labelY} text-anchor="end" fill="#9ea5ad" font-size="8">{line.label}</text>
+                                </template>
+                                <template for:each={trendRevBarItems} for:item="bar">
+                                    <g key={bar.key}>
+                                        <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} fill="#2e844a" rx="2" opacity="0.8"></rect>
+                                        <template if:true={bar.hasRev}>
+                                            <text x={bar.centerX} y={bar.countY} text-anchor="middle" fill="#1c5c30" font-size="7">{bar.revLabel}</text>
+                                        </template>
+                                        <text x={bar.centerX} y="126" text-anchor="middle" fill="#9ea5ad" font-size="8">{bar.label}</text>
+                                    </g>
+                                </template>
+                            </svg>
+                        </div>
+                    </div>
+                    <!-- 月別詳細テーブル -->
+                    <div class="gkd-panel">
+                        <div class="gkd-panel-title">月別詳細</div>
+                        <div class="gkd-table-wrap">
+                            <table class="gkd-table">
+                                <thead>
+                                    <tr>
+                                        <th>月</th>
+                                        <th class="r">面談学生</th>
+                                        <th class="r">紹介数</th>
+                                        <th class="r">面→紹率</th>
+                                        <th class="r">承諾数</th>
+                                        <th class="r">承諾率</th>
+                                        <th class="r">承諾売上</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template for:each={trendTableRows} for:item="row">
+                                        <tr key={row.label}>
+                                            <td class="name-cell">{row.label}</td>
+                                            <td class="r">{row.meetings}</td>
+                                            <td class="r">{row.count}</td>
+                                            <td class="r muted">{row.mtgToRefRate}</td>
+                                            <td class="r">{row.accepted}</td>
+                                            <td class="r muted">{row.accRate}</td>
+                                            <td class="r green">{row.revenueDisplay}</td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                                <tfoot>
+                                    <tr class="total-row">
+                                        <td>合計</td>
+                                        <td class="r">{trendTotalRow.meetings}</td>
+                                        <td class="r">{trendTotalRow.count}</td>
+                                        <td class="r muted">{trendTotalRow.mtgToRefRate}</td>
+                                        <td class="r">{trendTotalRow.accepted}</td>
+                                        <td class="r muted">{trendTotalRow.accRate}</td>
+                                        <td class="r green">{trendTotalRow.revenueDisplay}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </template>
+                <template if:false={hasMonthlyData}>
+                    <div class="gkd-panel"><div class="gkd-empty">データなし</div></div>
+                </template>
+            </template>
+
+            <!-- Tab 2: 担当者別KPI -->
+            <template if:true={isTab2}>
+                <!-- ★ サマリーバー（タブ上部）統一スタイル -->
+                <div class="gkd-byname-kpi-bar">
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">紹介数</div>
+                        <div class="gkd-bkpi-value">{totalReferrals}<span class="gkd-bkpi-unit">件</span></div>
+                    </div>
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">承諾数</div>
+                        <div class="gkd-bkpi-value">{totalAccepted}<span class="gkd-bkpi-unit">件</span></div>
+                    </div>
+                    <div class="gkd-bkpi-card gkd-bkpi-card--accent">
+                        <div class="gkd-bkpi-label">承諾率</div>
+                        <div class="gkd-bkpi-value gkd-bkpi-blue">{acceptanceRateOverMeeting}</div>
+                    </div>
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">承諾後辞退率</div>
+                        <div class="gkd-bkpi-value">{totalDeclineAfterAcceptRate}</div>
+                    </div>
+                    <div class="gkd-bkpi-sep"></div>
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">実売上</div>
+                        <div class="gkd-bkpi-value gkd-bkpi-green">{totalRevenueDisplay}</div>
+                    </div>
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">計上売上</div>
+                        <div class="gkd-bkpi-value gkd-bkpi-green">{totalBookedRevenueDisplay}</div>
+                    </div>
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">平均承諾単価</div>
+                        <div class="gkd-bkpi-value">{avgAcceptPriceDisplay}</div>
+                    </div>
+                    <div class="gkd-bkpi-card">
+                        <div class="gkd-bkpi-label">加重ヨミ</div>
+                        <div class="gkd-bkpi-value gkd-bkpi-amber">{totalWeightedYomiDisplay}</div>
+                    </div>
+                </div>
+
+                <div class="gkd-panel">
+                    <div class="gkd-panel-title">担当者別 KPI（CA担当者ベース）</div>
+                    <div class="gkd-table-wrap">
+                        <table class="gkd-table">
+                            <thead>
+                                <tr>
+                                    <th>担当CA</th>
+                                    <th class="r">面談学生</th>
+                                    <th class="r">紹介学生</th>
+                                    <th class="r muted">紹介率</th>
+                                    <th class="r divider">紹介数</th>
+                                    <th class="r">説明会参加</th>
+                                    <th class="r">内定</th>
+                                    <th class="r">承諾</th>
+                                    <th class="r muted">承諾率</th>
+                                    <th class="r">承諾後辞退</th>
+                                    <th class="r muted">辞退率</th>
+                                    <th class="r divider">平均承諾単価</th>
+                                    <th class="r">実売上</th>
+                                    <th class="r">計上売上</th>
+                                    <th class="r">加重ヨミ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={consultantRows} for:item="row">
+                                    <tr key={row.name}>
+                                        <td class="name-cell">{row.name}</td>
+                                        <td class="r">{row.meetingCount}</td>
+                                        <td class="r">{row.totalStudents}</td>
+                                        <td class="r muted">{row.meetingToReferralRate}</td>
+                                        <td class="r divider">{row.referrals}</td>
+                                        <td class="r">{row.sessionParticipated}</td>
+                                        <td class="r">{row.offerCount}</td>
+                                        <td class="r">{row.accepted}</td>
+                                        <td class="r muted">{row.acceptanceRate}</td>
+                                        <td class="r">{row.declinedAfterAccept}</td>
+                                        <td class="r muted">{row.declineAfterAcceptRate}</td>
+                                        <td class="r divider muted">{row.avgAcceptPriceDisplay}</td>
+                                        <td class="r green">{row.revenueDisplay}</td>
+                                        <td class="r green">{row.bookedRevenueDisplay}</td>
+                                        <td class="r amber">{row.yomiDisplay}</td>
+                                    </tr>
+                                </template>
+                                <template if:false={hasConsultantData}>
+                                    <tr><td colspan="15" class="gkd-empty">データなし</td></tr>
+                                </template>
+                            </tbody>
+                            <template if:true={hasConsultantData}>
+                                <tfoot>
+                                    <tr class="total-row">
+                                        <td>合計</td>
+                                        <td class="r">{totalMeetings}</td>
+                                        <td class="r">—</td>
+                                        <td class="r muted">—</td>
+                                        <td class="r divider">{totalReferrals}</td>
+                                        <td class="r">{totalSessionParticipated}</td>
+                                        <td class="r">{totalOfferCount}</td>
+                                        <td class="r">{totalAccepted}</td>
+                                        <td class="r muted">{acceptanceRateOverMeeting}</td>
+                                        <td class="r">{totalDeclinedAfterAccept}</td>
+                                        <td class="r muted">{totalDeclineAfterAcceptRate}</td>
+                                        <td class="r divider muted">{avgAcceptPriceDisplay}</td>
+                                        <td class="r green">{totalRevenueDisplay}</td>
+                                        <td class="r green">{totalBookedRevenueDisplay}</td>
+                                        <td class="r amber">{totalWeightedYomiDisplay}</td>
+                                    </tr>
+                                </tfoot>
+                            </template>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 個人別月次計上売上（Tab2下部） -->
+                <div class="gkd-panel" style="margin-top:16px">
+                    <div class="gkd-panel-title">個人別月次計上売上（{selectedYear}年度・計上売上）</div>
+                    <template if:true={_isConsultantMonthlyLoading}>
+                        <div class="gkd-loading-wrap"><lightning-spinner alternative-text="読み込み中" size="medium"></lightning-spinner></div>
+                    </template>
+                    <template if:false={_isConsultantMonthlyLoading}>
+                        <template if:true={consultantMonthlyRows.length}>
+                            <div class="gkd-table-wrap gkd-cm-wrap">
+                                <table class="gkd-table gkd-cm-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="gkd-cm-th-name">担当CA</th>
+                                            <template for:each={fyMonthLabels} for:item="m">
+                                                <th key={m.key} class="gkd-cm-th-month">{m.label}</th>
+                                            </template>
+                                            <th class="gkd-cm-th-total">承諾</th>
+                                            <th class="gkd-cm-th-total">合計売上</th>
+                                            <th class="gkd-cm-th-bar"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template for:each={consultantMonthlyRows} for:item="row">
+                                            <tr key={row.caName}>
+                                                <td class="gkd-cm-name">{row.caName}</td>
+                                                <template for:each={row.months} for:item="m">
+                                                    <td key={m.key} class={m.cellClass}
+                                                        data-ca={m.caName} data-month={m.monthIdx}
+                                                        onclick={handleCmCellClick}>{m.revDisplay}</td>
+                                                </template>
+                                                <td class="gkd-cm-total c">{row.totalAccepted}</td>
+                                                <td class="gkd-cm-total r amber">{row.totalRevDisplay}</td>
+                                                <td class="gkd-cm-bar-cell"><div class="gkd-cm-bar" style={row.barStyle}></div></td>
+                                            </tr>
+                                        </template>
+                                        <tr class="gkd-cm-footer">
+                                            <td class="gkd-cm-name">合計</td>
+                                            <template for:each={consultantMonthlyTotals} for:item="m">
+                                                <td key={m.key} class={m.cellClass}>{m.revDisplay}</td>
+                                            </template>
+                                            <td></td><td></td><td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                        <template if:false={consultantMonthlyRows.length}>
+                            <div class="gkd-empty">データがありません</div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Tab 5: 紹介者別 KPI -->
+            <template if:true={isTab5}>
+                <div class="gkd-panel">
+                    <div class="gkd-panel-header-row">
+                        <div class="gkd-panel-title">{referrerAxisLabel}別 KPI（紹介数 上位30件）</div>
+                        <div class="gkd-axis-toggle">
+                            <button class={referrerAxisReporterClass} data-axis="reporter" onclick={handleReferrerAxisChange}>紹介者別</button>
+                            <button class={referrerAxisRouteClass} data-axis="route" onclick={handleReferrerAxisChange}>応募経路別</button>
+                        </div>
+                    </div>
+
+                    <template if:true={_isReferrerLoading}>
+                        <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                    </template>
+
+                    <template if:false={_isReferrerLoading}>
+                        <template if:true={hasReferrerRows}>
+                            <!-- 歩留まりファネル -->
+                            <template if:true={referrerFunnel}>
+                                <div class="gkd-byname-kpi-bar">
+                                    <div class="gkd-bkpi-card">
+                                        <div class="gkd-bkpi-label">面談学生</div>
+                                        <div class="gkd-bkpi-value">{referrerFunnel.interviewed}<span class="gkd-bkpi-unit">人</span></div>
+                                    </div>
+                                    <div class="gkd-bkpi-funnel-arrow">
+                                        <span class="gkd-bkpi-rate">{referrerFunnel.refRate}</span>
+                                        <span class="gkd-bkpi-arrow-icon">→</span>
+                                    </div>
+                                    <div class="gkd-bkpi-card">
+                                        <div class="gkd-bkpi-label">紹介学生</div>
+                                        <div class="gkd-bkpi-value">{referrerFunnel.referred}<span class="gkd-bkpi-unit">人</span></div>
+                                    </div>
+                                    <div class="gkd-bkpi-funnel-arrow">
+                                        <span class="gkd-bkpi-rate">{referrerFunnel.sessionRate}</span>
+                                        <span class="gkd-bkpi-arrow-icon">→</span>
+                                    </div>
+                                    <div class="gkd-bkpi-card">
+                                        <div class="gkd-bkpi-label">説明会参加</div>
+                                        <div class="gkd-bkpi-value">{referrerFunnel.session}<span class="gkd-bkpi-unit">人</span></div>
+                                    </div>
+                                    <div class="gkd-bkpi-funnel-arrow">
+                                        <span class="gkd-bkpi-rate">{referrerFunnel.offerRate}</span>
+                                        <span class="gkd-bkpi-arrow-icon">→</span>
+                                    </div>
+                                    <div class="gkd-bkpi-card">
+                                        <div class="gkd-bkpi-label">内定</div>
+                                        <div class="gkd-bkpi-value">{referrerFunnel.offers}<span class="gkd-bkpi-unit">人</span></div>
+                                    </div>
+                                    <div class="gkd-bkpi-funnel-arrow">
+                                        <span class="gkd-bkpi-rate">{referrerFunnel.acceptRate}</span>
+                                        <span class="gkd-bkpi-arrow-icon">→</span>
+                                    </div>
+                                    <div class="gkd-bkpi-card gkd-bkpi-card--accent">
+                                        <div class="gkd-bkpi-label">承諾</div>
+                                        <div class="gkd-bkpi-value gkd-bkpi-green">{referrerFunnel.accepted}<span class="gkd-bkpi-unit">人</span></div>
+                                    </div>
+                                    <div class="gkd-bkpi-sep"></div>
+                                    <div class="gkd-bkpi-card">
+                                        <div class="gkd-bkpi-label">面談→承諾</div>
+                                        <div class="gkd-bkpi-value gkd-bkpi-green">{referrerFunnel.totalAcceptRate}</div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div class="gkd-table-wrap">
+                                <table class="gkd-table">
+                                    <thead>
+                                        <tr>
+                                            <th>紹介者</th>
+                                            <th class="r">面談学生</th>
+                                            <th class="r">紹介学生</th>
+                                            <th class="r muted">紹介率</th>
+                                            <th class="r">紹介数</th>
+                                            <th class="r">説明会参加</th>
+                                            <th class="r">内定</th>
+                                            <th class="r">承諾</th>
+                                            <th class="r muted">承諾率</th>
+                                            <th class="r muted">承諾後辞退率</th>
+                                            <th class="r divider">平均承諾単価</th>
+                                            <th class="r">実売上</th>
+                                            <th class="r">計上売上</th>
+                                            <th class="r">加重ヨミ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template for:each={processedReferrerRows} for:item="r">
+                                            <tr key={r.name}>
+                                                <td class="name-cell">{r.name}</td>
+                                                <td class="r">{r.interviewedStudents}</td>
+                                                <td class="r">{r.referredStudents}</td>
+                                                <td class="r muted">{r.referralRate}</td>
+                                                <td class="r">{r.referrals}</td>
+                                                <td class="r">{r.sessionParticipated}</td>
+                                                <td class="r">{r.offerCount}</td>
+                                                <td class="r green">{r.accepted}</td>
+                                                <td class="r muted">{r.acceptanceRate}</td>
+                                                <td class="r muted">{r.declineAfterAcceptRate}</td>
+                                                <td class="r divider">{r.avgAcceptPriceDisplay}</td>
+                                                <td class="r green">{r.revenueDisplay}</td>
+                                                <td class="r green">{r.bookedRevenueDisplay}</td>
+                                                <td class="r amber">{r.weightedYomiDisplay}</td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                        <template if:false={hasReferrerRows}>
+                            <div class="gkd-empty">該当する紹介者がいません</div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Tab 3: 企業別KPI -->
+            <template if:true={isTab3}>
+                <div class="gkd-panel">
+                    <div class="gkd-panel-header-row">
+                        <div class="gkd-panel-title">企業別 KPI（紹介数上位30社・フルファネル）</div>
+                        <button class="gkd-csv-btn" onclick={handleExportCompanyCSV} title="CSV出力">CSV ダウンロード</button>
+                    </div>
+                    <div class="gkd-table-wrap">
+                        <table class="gkd-table">
+                            <thead>
+                                <tr>
+                                    <th>企業名</th>
+                                    <th class="r">紹介</th>
+                                    <th class="r">説明会参加</th>
+                                    <th class="r muted">参加率</th>
+                                    <th class="r">1次参加</th>
+                                    <th class="r muted">通過率</th>
+                                    <th class="r">2次参加</th>
+                                    <th class="r muted">通過率</th>
+                                    <th class="r">3次参加</th>
+                                    <th class="r muted">通過率</th>
+                                    <th class="r">最終参加</th>
+                                    <th class="r muted">通過率</th>
+                                    <th class="r">内定</th>
+                                    <th class="r muted">内定率</th>
+                                    <th class="r">承諾</th>
+                                    <th class="r muted">承諾率</th>
+                                    <th class="r divider">実売上</th>
+                                    <th class="r">計上売上</th>
+                                    <th class="r">加重ヨミ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={companyRows} for:item="row">
+                                    <tr key={row.companyName}>
+                                        <td class="name-cell">{row.companyName}</td>
+                                        <td class="r">{row.referrals}</td>
+                                        <td class="r">{row.sessionParticipated}</td>
+                                        <td class="r muted">{row.sessionRate}</td>
+                                        <td class="r">{row.interview1Pass}</td>
+                                        <td class="r muted">{row.if1Rate}</td>
+                                        <td class="r">{row.interview2Pass}</td>
+                                        <td class="r muted">{row.if2Rate}</td>
+                                        <td class="r">{row.interview3Pass}</td>
+                                        <td class="r muted">{row.if3Rate}</td>
+                                        <td class="r">{row.finalPass}</td>
+                                        <td class="r muted">{row.finalRate}</td>
+                                        <td class="r">{row.offerCount}</td>
+                                        <td class="r muted">{row.offerRate}</td>
+                                        <td class="r">{row.accepted}</td>
+                                        <td class="r muted">{row.acceptRate}</td>
+                                        <td class="r divider green">{row.revenueDisplay}</td>
+                                        <td class="r green">{row.bookedRevenueDisplay}</td>
+                                        <td class="r amber">{row.yomiDisplay}</td>
+                                    </tr>
+                                </template>
+                                <template if:false={hasCompanyData}>
+                                    <tr><td colspan="19" class="gkd-empty">データなし</td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Tab 4: 母集団分析 -->
+            <template if:true={isTab4}>
+                <div class="gkd-panel">
+                    <div class="gkd-panel-title">母集団分析</div>
+                    <template if:true={isPopLoading}>
+                        <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                    </template>
+                    <template if:false={isPopLoading}>
+                        <div class="gkd-stats-row">
+                            <div class="gkd-stat-box">
+                                <div class="gkd-stat-label">総学生数</div>
+                                <div class="gkd-stat-value">{totalStudents}<span class="gkd-unit">人</span></div>
+                            </div>
+                            <div class="gkd-stat-box">
+                                <div class="gkd-stat-label">有効学生数</div>
+                                <div class="gkd-stat-value gkd-green">{validStudents}<span class="gkd-unit">人</span></div>
+                            </div>
+                            <div class="gkd-stat-box">
+                                <div class="gkd-stat-label">有効化率</div>
+                                <div class="gkd-stat-value">{validStudentRate}<span class="gkd-unit">%</span></div>
+                            </div>
+                            <div class="gkd-stat-box">
+                                <div class="gkd-stat-label">体育会系</div>
+                                <div class="gkd-stat-value">{athleteStudents}<span class="gkd-unit">人</span></div>
+                            </div>
+                            <div class="gkd-stat-box">
+                                <div class="gkd-stat-label">体育会系比率</div>
+                                <div class="gkd-stat-value">{athleteRate}<span class="gkd-unit">%</span></div>
+                            </div>
+                        </div>
+
+                        <div class="gkd-two-col">
+                            <div class="gkd-sub-panel">
+                                <div class="gkd-sub-title">流入経路別（上位15）</div>
+                                <template for:each={routeBreakdown} for:item="item">
+                                    <div key={item.label} class="gkd-bar-row">
+                                        <div class="gkd-bar-label">{item.label}</div>
+                                        <div class="gkd-bar-track">
+                                            <div class="gkd-bar-fill" style={item.barStyle}></div>
+                                        </div>
+                                        <div class="gkd-bar-count">{item.count}<span class="gkd-pct"> {item.pct}%</span></div>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="gkd-sub-panel">
+                                <div class="gkd-sub-title">卒年別</div>
+                                <template for:each={gradYearBreakdown} for:item="item">
+                                    <div key={item.label} class="gkd-bar-row">
+                                        <div class="gkd-bar-label">{item.label}</div>
+                                        <div class="gkd-bar-track">
+                                            <div class="gkd-bar-fill gkd-bar-purple" style={item.barStyle}></div>
+                                        </div>
+                                        <div class="gkd-bar-count">{item.count}<span class="gkd-pct"> {item.pct}%</span></div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- 学生評価（7項目） -->
+                        <template for:each={evaluationBreakdown} for:item="ef">
+                            <div key={ef.key} class="gkd-sub-panel" style="margin-top: 16px;">
+                                <div class="gkd-sub-title">{ef.fieldName}</div>
+                                <div class="gkd-two-col">
+                                    <div class="gkd-table-wrap">
+                                        <table class="gkd-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>評価値</th>
+                                                    <th class="r">人数</th>
+                                                    <th class="r">割合</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template for:each={ef.items} for:item="item">
+                                                    <tr key={item.key}>
+                                                        <td class="name-cell">{item.label}</td>
+                                                        <td class="r">{item.count}</td>
+                                                        <td class="r muted">{item.pct}%</td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div>
+                                        <template for:each={ef.items} for:item="item">
+                                            <div key={item.key} class="gkd-bar-row">
+                                                <div class="gkd-bar-label">{item.label}</div>
+                                                <div class="gkd-bar-track">
+                                                    <div class="gkd-bar-fill" style={item.barStyle}></div>
+                                                </div>
+                                                <div class="gkd-bar-count">{item.count}<span class="gkd-pct"> {item.pct}%</span></div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Tab 6: CA別実績ヨミ管理 -->
+            <template if:true={isTab6}>
+                <div class="gkd-panel">
+                    <div class="gkd-panel-header-row">
+                        <div class="gkd-panel-title">CA別実績ヨミ管理</div>
+                        <div class="gkd-byname-filters">
+                            <!-- CA検索（ラベル付き） -->
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">担当CA</span>
+                                <div class="gkd-ca-search-wrap">
+                                    <input type="text" class="gkd-ca-search-input"
+                                        value={caInputValue}
+                                        placeholder="CA名で検索..."
+                                        oninput={handleCASearchInput}
+                                        onfocus={handleCASearchFocus}
+                                        onblur={handleCASearchBlur} />
+                                    <template if:true={_caDropdownOpen}>
+                                        <div class="gkd-ca-dropdown">
+                                            <template for:each={filteredCAOptions} for:item="opt">
+                                                <div key={opt.value} class={opt.itemClass}
+                                                    data-value={opt.value}
+                                                    data-label={opt.label}
+                                                    onmousedown={handleCAOptionClick}>{opt.label}</div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">ヨミ月</span>
+                                <lightning-combobox label="ヨミ月" variant="label-hidden"
+                                    value={selectedYomiMonth} options={yomiMonthOptions}
+                                    onchange={handleYomiMonthChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">フェーズ</span>
+                                <lightning-combobox label="フェーズ" variant="label-hidden"
+                                    value={selectedPhase} options={phaseOptions}
+                                    onchange={handlePhaseChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <input type="text" class="gkd-name-search" placeholder="学生名で検索..."
+                                    value={_studentNameQuery} oninput={handleStudentNameSearch} />
+                            </div>
+                            <div class="gkd-filter-group">
+                                <input type="text" class="gkd-name-search" placeholder="企業名で検索..."
+                                    value={_companyQuery} oninput={handleCompanySearch} />
+                            </div>
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">精度</span>
+                                <select class="gkd-native-select gkd-native-select--sm" onchange={handleAccuracyFilterChange}>
+                                    <template for:each={accuracyFilterOptions} for:item="opt">
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">並び替え</span>
+                                <lightning-combobox variant="label-hidden"
+                                    value={_sortField} options={sortFieldOptions}
+                                    onchange={handleSortFieldChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                                <lightning-combobox variant="label-hidden"
+                                    value={_sortDir} options={sortDirOptions}
+                                    onchange={handleSortDirChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <label class="gkd-toggle-label" title="ヨミチェック（★）が付いた学生のみ表示">
+                                    <input type="checkbox" checked={_onlyYomiFlag} onchange={handleOnlyYomiFlagToggle} />
+                                    <span class="gkd-toggle-text">★ヨミのみ</span>
+                                </label>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <label class="gkd-toggle-label" title="時期追い・連絡なしの学生を表示する">
+                                    <input type="checkbox" checked={_showInactive} onchange={handleShowInactiveToggle} />
+                                    <span class="gkd-toggle-text">非アクティブも表示</span>
+                                </label>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <button class="gkd-csv-btn" onclick={handleExportBynameCSV} title="CSV出力">📥 CSV</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 一括操作ツールバー（選択がある時のみ表示） -->
+                    <template if:true={hasBulkSelection}>
+                        <div class="gkd-bulk-toolbar">
+                            <div class="gkd-bulk-info">
+                                <span class="gkd-bulk-count">{bulkSelectedCount}件選択中</span>
+                                <template if:true={bulkOverLimit}>
+                                    <span class="gkd-bulk-warning">⚠️ 一括更新は50件までです</span>
+                                </template>
+                            </div>
+                            <div class="gkd-bulk-fields">
+                                <select class="gkd-bulk-select" data-field="status" onchange={handleBulkNativeChange}>
+                                    <option value="">ステータス（変更なし）</option>
+                                    <template for:each={bulkStatusOptions} for:item="opt">
+                                        <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                    </template>
+                                </select>
+                                <select class="gkd-bulk-select" data-field="accuracy" onchange={handleBulkNativeChange}>
+                                    <option value="">精度（変更なし）</option>
+                                    <template for:each={bulkAccuracyOptions} for:item="opt">
+                                        <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                    </template>
+                                </select>
+                                <input type="month" class="gkd-bulk-date" data-field="yomiMonth"
+                                    value={_bulkYomiMonth} onchange={handleBulkNativeChange} title="ヨミ月" />
+                            </div>
+                            <div class="gkd-bulk-actions">
+                                <button class="gkd-bulk-apply-btn" onclick={handleBulkApply} disabled={isBulkButtonDisabled}>{bulkApplyLabel}</button>
+                                <button class="gkd-bulk-clear-btn" onclick={handleClearBulkSelection}>選択解除</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- 全体サマリーKPIバー -->
+                    <div class="gkd-byname-kpi-bar">
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">担当学生</div>
+                            <div class="gkd-bkpi-value">{bynameKpi.studentCount}<span class="gkd-bkpi-unit">人</span></div>
+                        </div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">面談学生</div>
+                            <div class="gkd-bkpi-value">{bynameKpi.totalMeetings}<span class="gkd-bkpi-unit">件</span></div>
+                        </div>
+                        <div class="gkd-bkpi-funnel-arrow">
+                            <span class="gkd-bkpi-rate">{bynameKpi.mtgToRefRate}</span>
+                            <span class="gkd-bkpi-arrow-icon">→</span>
+                        </div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">紹介数</div>
+                            <div class="gkd-bkpi-value">{bynameKpi.pipelineCount}<span class="gkd-bkpi-unit">件</span></div>
+                        </div>
+                        <div class="gkd-bkpi-sep"></div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">面接中</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-blue">{bynameKpi.interviewCount}<span class="gkd-bkpi-unit">件</span></div>
+                        </div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">内定</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-amber">{bynameKpi.offerCount}<span class="gkd-bkpi-unit">件</span></div>
+                        </div>
+                        <div class="gkd-bkpi-funnel-arrow">
+                            <span class="gkd-bkpi-rate">{bynameKpi.refToAcceptRate}</span>
+                            <span class="gkd-bkpi-arrow-icon">→</span>
+                        </div>
+                        <div class="gkd-bkpi-card gkd-bkpi-card--accent">
+                            <div class="gkd-bkpi-label">承諾済</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-green">{bynameKpi.acceptedCount}<span class="gkd-bkpi-unit">件</span></div>
+                        </div>
+                        <div class="gkd-bkpi-sep"></div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">実売上</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-green">{bynameKpi.realRevenue}</div>
+                        </div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">加重ヨミ</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-amber">{bynameKpi.yomiTotal}</div>
+                        </div>
+                    </div>
+
+                    <template if:true={isBynameLoading}>
+                        <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                    </template>
+                    <template if:false={isBynameLoading}>
+                        <template if:true={hasBynameData}>
+                            <!-- 学生ごとのグループ表示 -->
+                            <template for:each={bynameGrouped} for:item="group">
+                                <div key={group.key} class="gkd-student-group">
+                                    <div class="gkd-student-group-header" onclick={handleToggleGroup} data-key={group.key}>
+                                        <span class="gkd-caret">{group.caret}</span>
+                                        <span class="gkd-student-name">{group.studentName}</span>
+                                        <span class="gkd-student-ca muted">{group.caName}</span>
+                                        <span class="gkd-student-grad muted">{group.gradYear}</span>
+                                        <span class="gkd-student-mtg muted" title="FS面談日">面談 {group.meetingDateDisplay}</span>
+                                        <span class="gkd-student-count muted">{group.pipelineCount}社</span>
+                                        <span class="gkd-student-accept-rate gkd-badge-rate">{group.acceptRateDisplay}</span>
+                                        <span class="gkd-student-revenue gkd-green">{group.realRevenueDisplay}</span>
+                                        <span class="gkd-student-yomi amber">{group.totalYomiDisplay}</span>
+                                    </div>
+                                    <template if:true={group.expanded}>
+                                    <div class="gkd-table-wrap gkd-byname-table-wrap">
+                                        <table class="gkd-table gkd-byname-table">
+                                            <colgroup>
+                                                <col class="gkd-col-checkbox" />
+                                                <col class="gkd-col-company" />
+                                                <col class="gkd-col-status" />
+                                                <col class="gkd-col-accuracy" />
+                                                <col class="gkd-col-yomimonth" />
+                                                <col class="gkd-col-yomi" />
+                                                <col class="gkd-col-meetings" />
+                                                <col class="gkd-col-yomiflag" />
+                                                <col class="gkd-col-actions" />
+                                            </colgroup>
+                                            <thead>
+                                                <tr>
+                                                    <th class="c"><span title="一括選択">☑</span></th>
+                                                    <th>企業名</th>
+                                                    <th>ステータス</th>
+                                                    <th>精度</th>
+                                                    <th class="r">ヨミ月</th>
+                                                    <th class="r">加重ヨミ</th>
+                                                    <th class="r">面談学生</th>
+                                                    <th class="c">ヨミ企業</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template for:each={group.pipelines} for:item="row">
+                                                    <tr key={row.pipelineId} class={row.rowClass}>
+                                                        <td class="c">
+                                                            <input type="checkbox" data-id={row.pipelineId}
+                                                                checked={row.isSelected}
+                                                                onchange={handleSelectRow}
+                                                                class="gkd-row-checkbox" />
+                                                        </td>
+                                                        <td>{row.companyDisplay}</td>
+                                                        <td>
+                                                            <select class="gkd-native-select gkd-native-select--sm"
+                                                                data-id={row.pipelineId}
+                                                                onchange={handleBynameStatusChange}>
+                                                                <template for:each={row.statusOptionsWithSelected} for:item="opt">
+                                                                    <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                                </template>
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <select class="gkd-native-select gkd-native-select--sm"
+                                                                data-id={row.pipelineId}
+                                                                onchange={handleBynameAccuracyChange}>
+                                                                <template for:each={row.accuracyOptionsWithSelected} for:item="opt">
+                                                                    <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                                </template>
+                                                            </select>
+                                                        </td>
+                                                        <td class="r muted">
+                                                            <select class="gkd-native-select gkd-native-select--sm"
+                                                                data-id={row.pipelineId}
+                                                                onchange={handleBynameYomiMonthChange}>
+                                                                <template for:each={row.yomiMonthOptionsWithSelected} for:item="opt">
+                                                                    <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                                </template>
+                                                            </select>
+                                                        </td>
+                                                        <td class="r amber">{row.yomiDisplay}</td>
+                                                        <td class="r muted">{row.meetingCountDisplay}</td>
+                                                        <td class="c">
+                                                            <button class={row.yomiFlagClass}
+                                                                data-id={row.pipelineId}
+                                                                data-student={row.studentId}
+                                                                onclick={handleYomiFlagToggle}
+                                                                title="ヨミ企業に設定">★</button>
+                                                        </td>
+                                                        <td class="gkd-col-actions-cell">
+                                                            <button class="gkd-detail-btn" onclick={handleOpenDetail} data-id={row.pipelineId}>詳細</button>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </template>
+                        <template if:true={bynameNeedsFilter}>
+                            <div class="gkd-empty">CAまたは卒年を選択してください</div>
+                        </template>
+                        <template if:false={hasBynameData}>
+                            <template if:false={bynameNeedsFilter}>
+                                <div class="gkd-empty">データなし</div>
+                            </template>
+                        </template>
+                    </template>
+                </div>
+
+            </template>
+
+            <!-- Tab 7: チームヨミ管理 -->
+            <template if:true={isTab7}>
+                <div class="gkd-panel">
+                    <!-- ヘッダー -->
+                    <div class="gkd-panel-header-row">
+                        <div class="gkd-panel-title">チームヨミ管理</div>
+                        <div class="gkd-byname-filters">
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">ヨミ月</span>
+                                <lightning-combobox label="ヨミ月" variant="label-hidden"
+                                    value={_selectedTeamYomiMonth} options={teamYomiMonthOptions}
+                                    onchange={handleTeamYomiMonthChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">担当CA</span>
+                                <lightning-combobox label="担当CA" variant="label-hidden"
+                                    value={_selectedTeamYomiCA} options={teamYomiCAOptions}
+                                    onchange={handleTeamYomiCAChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                            </div>
+                            <button class="gkd-csv-btn" onclick={handleExportCSV}>CSV出力</button>
+                        </div>
+                    </div>
+
+                    <!-- KPIバー -->
+                    <div class="gkd-byname-kpi-bar">
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">対象件数</div>
+                            <div class="gkd-bkpi-value">{teamYomiKpi.count}<span class="gkd-bkpi-unit">件</span></div>
+                        </div>
+                        <div class="gkd-bkpi-card gkd-bkpi-card--accent">
+                            <div class="gkd-bkpi-label">承諾済</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-green">{teamYomiKpi.accepted}<span class="gkd-bkpi-unit">件</span></div>
+                        </div>
+                        <div class="gkd-bkpi-sep"></div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">実売上</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-green">{teamYomiKpi.realRevDisplay}</div>
+                        </div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">計上売上</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-green">{teamYomiKpi.bookedRevDisplay}</div>
+                        </div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">加重ヨミ合計</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-amber">{teamYomiKpi.totalYomiDisplay}</div>
+                        </div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">★ヨミ件数</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-amber">{teamYomiKpi.yomiFlagCount}<span class="gkd-bkpi-unit">件</span></div>
+                        </div>
+                        <div class="gkd-bkpi-card">
+                            <div class="gkd-bkpi-label">★ヨミ単価合計</div>
+                            <div class="gkd-bkpi-value gkd-bkpi-amber">{teamYomiKpi.yomiFlagUnitDisplay}</div>
+                        </div>
+                        <div class="gkd-bkpi-sep"></div>
+                        <!-- 四半期サマリー -->
+                        <template for:each={quarterlyYomiGroups} for:item="q">
+                            <div key={q.key} class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">{q.label}</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-blue" style="font-size:14px">{q.yomiDisplay}</div>
+                                <div class="gkd-bkpi-unit" style="font-size:10px">{q.count}件 / {q.accepted}承諾</div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <template if:true={_isTeamYomiLoading}>
+                        <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                    </template>
+                    <template if:false={_isTeamYomiLoading}>
+                        <!-- 月別グループテーブル -->
+                        <template for:each={teamYomiGrouped} for:item="grp">
+                            <div key={grp.key} class="gkd-ty-month-section">
+                                <div class="gkd-ty-month-header">
+                                    <span class="gkd-ty-month-label">{grp.label}</span>
+                                    <span class="gkd-ty-month-count">{grp.count}件</span>
+                                    <span class="gkd-ty-month-yomi">{grp.totalYomiDisplay}</span>
+                                </div>
+                                <div class="gkd-table-wrap">
+                                    <table class="gkd-table gkd-ty-table">
+                                        <colgroup>
+                                            <col class="gkd-ty-col-flag" />
+                                            <col class="gkd-ty-col-student" />
+                                            <col class="gkd-ty-col-grad" />
+                                            <col class="gkd-ty-col-ca" />
+                                            <col class="gkd-ty-col-company" />
+                                            <col class="gkd-ty-col-yomimonth" />
+                                            <col class="gkd-ty-col-status" />
+                                            <col class="gkd-ty-col-accuracy" />
+                                            <col class="gkd-ty-col-check" />
+                                            <col class="gkd-ty-col-yomi" />
+                                            <col class="gkd-ty-col-situation" />
+                                            <col class="gkd-ty-col-nadate" />
+                                            <col class="gkd-ty-col-nadetail" />
+                                            <col class="gkd-ty-col-other" />
+                                        </colgroup>
+                                        <thead>
+                                            <tr>
+                                                <th class="c">ヨミ</th>
+                                                <th>学生名</th>
+                                                <th>卒年</th>
+                                                <th>担当CA</th>
+                                                <th>企業名</th>
+                                                <th class="c">ヨミ月</th>
+                                                <th>フェーズ</th>
+                                                <th class="c">精度</th>
+                                                <th class="c">承諾確度</th>
+                                                <th class="r">加重ヨミ</th>
+                                                <th>現状の状況</th>
+                                                <th class="c">NA日</th>
+                                                <th>NA詳細</th>
+                                                <th>他社状況</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={grp.rows} for:item="row">
+                                                <tr key={row.pipelineId} class={row.rowClass}>
+                                                    <td class="c">
+                                                        <button class={row.yomiFlagClass}
+                                                            data-id={row.pipelineId}
+                                                            data-student={row.studentId}
+                                                            data-tab="7"
+                                                            onclick={handleYomiFlagToggle}
+                                                            title="月内ヨミ確度：高（複数社OK）">★</button>
+                                                    </td>
+                                                    <td class="gkd-ty-student">{row.studentName}</td>
+                                                    <td class="muted">{row.gradYear}</td>
+                                                    <td class="muted">{row.caName}</td>
+                                                    <td>{row.companyName}</td>
+                                                    <td class="c">
+                                                        <select class="gkd-native-select gkd-native-select--sm" data-id={row.pipelineId}
+                                                                onchange={handleTeamYomiMonthRowChange}>
+                                                            <template for:each={row.yomiMonthOptionsWithSelected} for:item="opt">
+                                                                <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                            </template>
+                                                        </select>
+                                                    </td>
+                                                    <td>
+                                                        <select class="gkd-native-select" data-id={row.pipelineId}
+                                                                onchange={handleTeamYomiStatusChange}>
+                                                            <template for:each={row.statusOptionsWithSelected} for:item="opt">
+                                                                <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                            </template>
+                                                        </select>
+                                                    </td>
+                                                    <td class="c">
+                                                        <select class="gkd-native-select gkd-native-select--sm" data-id={row.pipelineId}
+                                                                onchange={handleTeamYomiAccuracyChange}>
+                                                            <template for:each={row.accuracyOptionsWithSelected} for:item="opt">
+                                                                <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                            </template>
+                                                        </select>
+                                                    </td>
+                                                    <td class="c">
+                                                        <span class={row.checkGradeClass}>{row.checkGrade}</span>
+                                                        <span class="gkd-ty-rate-sub">{row.rateDisplay}</span>
+                                                        <button class="gkd-cl-edit-btn" data-id={row.pipelineId}
+                                                                onclick={handleOpenChecklistFromTeam}
+                                                                title="承諾確度チェックリストを編集">✎</button>
+                                                    </td>
+                                                    <td class="r amber">{row.weightedYomiDisplay}</td>
+                                                    <td>
+                                                        <input type="text" class="gkd-ty-input"
+                                                            value={row.editingSituation}
+                                                            data-id={row.pipelineId} data-field="situation"
+                                                            oninput={handleTeamYomiFieldInput}
+                                                            onblur={handleTeamYomiFieldBlur}
+                                                            placeholder="状況を入力..." />
+                                                    </td>
+                                                    <td class="c">
+                                                        <input type="date" class="gkd-ty-input gkd-ty-date"
+                                                            value={row.editingNaDate}
+                                                            data-id={row.pipelineId} data-field="naDate"
+                                                            oninput={handleTeamYomiFieldInput}
+                                                            onblur={handleTeamYomiFieldBlur} />
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="gkd-ty-input"
+                                                            value={row.editingNaDetail}
+                                                            data-id={row.pipelineId} data-field="naDetail"
+                                                            oninput={handleTeamYomiFieldInput}
+                                                            onblur={handleTeamYomiFieldBlur}
+                                                            placeholder="次のアクション..." />
+                                                    </td>
+                                                    <td>
+                                                        <input type="text" class="gkd-ty-input"
+                                                            value={row.editingOther}
+                                                            data-id={row.pipelineId} data-field="other"
+                                                            oninput={handleTeamYomiFieldInput}
+                                                            onblur={handleTeamYomiFieldBlur}
+                                                            placeholder="他社の状況..." />
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </template>
+                        <template if:false={teamYomiGrouped.length}>
+                            <div class="gkd-empty">該当データがありません</div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Tab 8: 企業別進捗管理 -->
+            <template if:true={isTab8}>
+                <div class="gkd-panel">
+                    <div class="gkd-panel-header-row">
+                        <div class="gkd-panel-title">企業別 学生進捗管理</div>
+                        <div class="gkd-byname-filters">
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">企業</span>
+                                <div class="gkd-ca-search-wrap" style="width:280px">
+                                    <input type="text" class="gkd-ca-search-input"
+                                        value={_companyTabQuery}
+                                        placeholder="企業名で検索（候補から選択も可）..."
+                                        oninput={handleCompanyTabQueryInput}
+                                        onfocus={handleCompanyTabSearchFocus}
+                                        onblur={handleCompanyTabSearchBlur} />
+                                    <template if:true={_companyDropdownOpen}>
+                                        <div class="gkd-ca-dropdown">
+                                            <template for:each={filteredCompanyOptions} for:item="opt">
+                                                <div key={opt.value} class={opt.itemClass}
+                                                    data-value={opt.value}
+                                                    onmousedown={handleCompanyOptionClick}>{opt.label}</div>
+                                            </template>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">担当CA</span>
+                                <lightning-combobox label="CA" variant="label-hidden"
+                                    value={_companyTabCA} options={caOptions}
+                                    onchange={handleCompanyTabCAChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">卒年</span>
+                                <lightning-combobox label="卒年" variant="label-hidden"
+                                    value={_companyTabGradYear} options={gradYearOptions}
+                                    onchange={handleCompanyTabGradYearChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                            </div>
+                            <div class="gkd-filter-group">
+                                <span class="gkd-filter-label">フェーズ</span>
+                                <lightning-combobox label="フェーズ" variant="label-hidden"
+                                    value={_companyTabPhase} options={companyTabPhaseOptions}
+                                    onchange={handleCompanyTabPhaseChange} class="gkd-filter-select">
+                                </lightning-combobox>
+                            </div>
+                        </div>
+                    </div>
+
+                    <template if:true={hasCompanyTabData}>
+                        <div class="gkd-byname-kpi-bar">
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">企業数</div>
+                                <div class="gkd-bkpi-value">{companyTabKpi.companyCount}<span class="gkd-bkpi-unit">社</span></div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">学生数</div>
+                                <div class="gkd-bkpi-value">{companyTabKpi.studentCount}<span class="gkd-bkpi-unit">人</span></div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">紹介数</div>
+                                <div class="gkd-bkpi-value">{companyTabKpi.referrals}<span class="gkd-bkpi-unit">件</span></div>
+                            </div>
+                            <div class="gkd-bkpi-sep"></div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">説明会以降</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-blue">{companyTabKpi.sessionCount}<span class="gkd-bkpi-unit">件</span></div>
+                            </div>
+                            <div class="gkd-bkpi-funnel-arrow">
+                                <span class="gkd-bkpi-rate">{companyTabKpi.sessionToOfferRate}</span>
+                                <span class="gkd-bkpi-arrow-icon">→</span>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">面接中</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-blue">{companyTabKpi.interviewCount}<span class="gkd-bkpi-unit">件</span></div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">内定</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-amber">{companyTabKpi.offerCount}<span class="gkd-bkpi-unit">件</span></div>
+                            </div>
+                            <div class="gkd-bkpi-funnel-arrow">
+                                <span class="gkd-bkpi-rate">{companyTabKpi.offerToAcceptRate}</span>
+                                <span class="gkd-bkpi-arrow-icon">→</span>
+                            </div>
+                            <div class="gkd-bkpi-card gkd-bkpi-card--accent">
+                                <div class="gkd-bkpi-label">承諾済</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-green">{companyTabKpi.acceptedCount}<span class="gkd-bkpi-unit">件</span></div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">承諾率</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-green">{companyTabKpi.referralToAcceptRate}</div>
+                            </div>
+                            <div class="gkd-bkpi-sep"></div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">実売上</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-green">{companyTabKpi.realRevenueDisplay}</div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">加重ヨミ</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-amber">{companyTabKpi.weightedYomiDisplay}</div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template if:true={_isCompanyTabLoading}>
+                        <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                    </template>
+                    <template if:false={_isCompanyTabLoading}>
+                        <template if:true={companyTabGrouped.length}>
+                            <template for:each={companyTabGrouped} for:item="grp">
+                                <div key={grp.key} class="gkd-student-group">
+                                    <div class="gkd-student-group-header">
+                                        <span class="gkd-student-name">{grp.companyName}</span>
+                                        <span class="gkd-student-count muted">{grp.studentCount}名</span>
+                                        <span class="gkd-student-accept-rate gkd-badge-rate">承諾 {grp.acceptedCount}</span>
+                                    </div>
+                                    <div class="gkd-table-wrap gkd-byname-table-wrap">
+                                        <table class="gkd-table gkd-byname-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>学生名</th>
+                                                    <th>担当CA</th>
+                                                    <template if:true={grp.hasPlatformJob}>
+                                                        <th>個別企業名</th>
+                                                        <th class="r">単価(円)</th>
+                                                    </template>
+                                                    <th>ステータス</th>
+                                                    <th>精度</th>
+                                                    <th class="r">ヨミ月</th>
+                                                    <th class="r">加重ヨミ</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <template for:each={grp.rows} for:item="row">
+                                                    <tr key={row.pipelineId}>
+                                                        <td>{row.studentName}</td>
+                                                        <td class="muted">{row.caName}</td>
+                                                        <template if:true={grp.hasPlatformJob}>
+                                                            <td>
+                                                                <input type="text" class="gkd-inline-input"
+                                                                    data-id={row.pipelineId}
+                                                                    value={row.individualCompanyNameDisplay}
+                                                                    placeholder="例: 楽天"
+                                                                    onblur={handleCompanyTabIndividualNameBlur} />
+                                                            </td>
+                                                            <td class="r">
+                                                                <input type="number" class="gkd-inline-input gkd-inline-input--num"
+                                                                    data-id={row.pipelineId}
+                                                                    value={row.unitPriceDisplay}
+                                                                    placeholder="0"
+                                                                    onblur={handleCompanyTabUnitPriceBlur} />
+                                                            </td>
+                                                        </template>
+                                                        <td>
+                                                            <select class="gkd-native-select gkd-native-select--sm"
+                                                                data-id={row.pipelineId}
+                                                                onchange={handleCompanyTabStatusChange}>
+                                                                <template for:each={row.statusOptionsWithSelected} for:item="opt">
+                                                                    <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                                </template>
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <select class="gkd-native-select gkd-native-select--sm"
+                                                                data-id={row.pipelineId}
+                                                                onchange={handleCompanyTabAccuracyChange}>
+                                                                <template for:each={row.accuracyOptionsWithSelected} for:item="opt">
+                                                                    <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                                </template>
+                                                            </select>
+                                                        </td>
+                                                        <td class="r muted">
+                                                            <select class="gkd-native-select gkd-native-select--sm"
+                                                                data-id={row.pipelineId}
+                                                                onchange={handleCompanyTabYomiMonthChange}>
+                                                                <template for:each={row.yomiMonthOptionsWithSelected} for:item="opt">
+                                                                    <option key={opt.value} value={opt.value} selected={opt.selected}>{opt.label}</option>
+                                                                </template>
+                                                            </select>
+                                                        </td>
+                                                        <td class="r amber">{row.yomiDisplay}</td>
+                                                        <td class="gkd-col-actions-cell">
+                                                            <button class="gkd-detail-btn" onclick={handleOpenDetail} data-id={row.pipelineId}>詳細</button>
+                                                        </td>
+                                                    </tr>
+                                                </template>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
+                        <template if:false={companyTabGrouped.length}>
+                            <template if:true={companyTabQueryShort}>
+                                <div class="gkd-empty">企業名を3文字以上入力してください</div>
+                            </template>
+                            <template if:false={companyTabQueryShort}>
+                                <div class="gkd-empty">該当する企業がありません</div>
+                            </template>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Tab 9: 学生別売上トラッキング（コホート分析） -->
+            <template if:true={isTab9}>
+                <div class="gkd-panel">
+                    <div class="gkd-panel-header-row">
+                        <div class="gkd-panel-title">学生別売上トラッキング（紹介日 / 初回面談日 コホート）</div>
+                    </div>
+                    <div class="gkd-cohort-filters">
+                        <div class="gkd-filter-group">
+                            <span class="gkd-filter-label">担当CA</span>
+                            <lightning-combobox label="CA" variant="label-hidden"
+                                value={selectedCA} options={caOptions}
+                                onchange={handleCohortCAChange} class="gkd-filter-select">
+                            </lightning-combobox>
+                        </div>
+                        <div class="gkd-filter-group">
+                            <span class="gkd-filter-label">卒年</span>
+                            <lightning-combobox label="卒年" variant="label-hidden"
+                                value={selectedGradYear} options={gradYearOptions}
+                                onchange={handleGradYearChange} class="gkd-filter-select">
+                            </lightning-combobox>
+                        </div>
+                        <div class="gkd-filter-group">
+                            <input type="text" class="gkd-name-search" style="width:200px"
+                                placeholder="学生名で検索..."
+                                value={_cohortQuery} oninput={handleCohortQueryInput} />
+                        </div>
+                        <div class="gkd-filter-group">
+                            <label class="gkd-toggle-label" title="紹介ゼロ・売上ゼロの学生も含めて表示">
+                                <input type="checkbox" checked={_cohortShowAll} onchange={handleCohortShowAllToggle} />
+                                <span class="gkd-toggle-text">非アクティブも表示</span>
+                            </label>
+                        </div>
+                        <div class="gkd-filter-group gkd-filter-spacer">
+                            <button class="gkd-csv-btn" onclick={handleExportCohortCSV} title="CSV出力">CSV ダウンロード</button>
+                        </div>
+                    </div>
+
+                    <template if:true={hasMonthlyCohort}>
+                        <div class="gkd-cohort-month-panel">
+                            <div class="gkd-cohort-month-header">
+                                <div class="gkd-cohort-month-title">{cohortBasisLabel}別サマリー <span class="gkd-cohort-month-sub">{selectedYear}年度</span></div>
+                                <div class="gkd-toggle-group">
+                                    <button class={referralBtnClass} onclick={handleCohortBasisReferral}>紹介月ベース</button>
+                                    <button class={acceptBtnClass} onclick={handleCohortBasisAccept}>承諾月ベース</button>
+                                </div>
+                            </div>
+                            <div class="gkd-table-wrap">
+                                <table class="gkd-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{cohortBasisLabel}</th>
+                                            <th class="r">学生数</th>
+                                            <th class="r">面談済</th>
+                                            <th class="r muted">面談化率</th>
+                                            <th class="r divider">案件合計</th>
+                                            <th class="r">承諾</th>
+                                            <th class="r muted">承諾率</th>
+                                            <th class="r muted">辞退率</th>
+                                            <th class="r">進行中</th>
+                                            <th class="r divider">平均LT</th>
+                                            <th class="r">平均承諾単価</th>
+                                            <th class="r">実売上</th>
+                                            <th class="r">計上売上</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template for:each={monthlyCohortSummary} for:item="m">
+                                            <tr key={m.key}>
+                                                <td class="name-cell">{m.key}</td>
+                                                <td class="r">{m.students}</td>
+                                                <td class="r">{m.interviewed}</td>
+                                                <td class="r muted">{m.interviewRate}</td>
+                                                <td class="r divider">{m.totalPipes}</td>
+                                                <td class="r green">{m.accepted}</td>
+                                                <td class="r muted">{m.acceptRate}</td>
+                                                <td class="r muted">{m.declineRate}</td>
+                                                <td class="r">{m.inProgress}</td>
+                                                <td class="r divider muted">{m.avgLT}</td>
+                                                <td class="r">{m.avgPriceDisplay}</td>
+                                                <td class="r green">{m.totalRealDisplay}</td>
+                                                <td class="r green">{m.totalBookedDisplay}</td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template if:true={cohortKpi}>
+                        <div class="gkd-byname-kpi-bar">
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">対象学生</div>
+                                <div class="gkd-bkpi-value">{cohortKpi.total}<span class="gkd-bkpi-unit">人</span></div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">承諾済</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-green">{cohortKpi.accepted}<span class="gkd-bkpi-unit">人</span></div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">承諾率</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-green">{cohortKpi.acceptRate}</div>
+                            </div>
+                            <div class="gkd-bkpi-sep"></div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">実売上</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-green">{cohortKpi.realDisplay}</div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">計上売上</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-green">{cohortKpi.bookedDisplay}</div>
+                            </div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">平均承諾単価</div>
+                                <div class="gkd-bkpi-value gkd-bkpi-green">{cohortAvgAcceptPriceDisplay}</div>
+                            </div>
+                            <div class="gkd-bkpi-sep"></div>
+                            <div class="gkd-bkpi-card">
+                                <div class="gkd-bkpi-label">平均リードタイム</div>
+                                <div class="gkd-bkpi-value">{cohortKpi.avgLeadDisplay}</div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template if:true={_isCohortLoading}>
+                        <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                    </template>
+                    <template if:false={_isCohortLoading}>
+                        <template if:true={studentCohortRows.length}>
+                            <div class="gkd-table-wrap">
+                                <table class="gkd-table">
+                                    <thead>
+                                        <tr>
+                                            <th>学生名</th>
+                                            <th>担当CA</th>
+                                            <th>卒年</th>
+                                            <th>直近ステータス</th>
+                                            <th class="r divider">紹介日</th>
+                                            <th class="r">初回面談日</th>
+                                            <th class="r">承諾日</th>
+                                            <th class="r">リードタイム</th>
+                                            <th class="r">案件数</th>
+                                            <th class="r divider">実売上</th>
+                                            <th class="r">計上売上</th>
+                                            <th>承諾企業</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template for:each={studentCohortRows} for:item="row">
+                                            <tr key={row.studentId}>
+                                                <td>{row.studentName}</td>
+                                                <td class="muted">{row.caName}</td>
+                                                <td class="muted">{row.gradYear}</td>
+                                                <td><span class={row.latestStatusClass}>{row.latestStatusLabel}</span></td>
+                                                <td class="r divider muted">{row.firstReferralDisplay}</td>
+                                                <td class="r muted">{row.firstInterviewDisplay}</td>
+                                                <td class="r muted">{row.acceptDateDisplay}</td>
+                                                <td class="r muted">{row.leadTimeDisplay}</td>
+                                                <td class="r">{row.pipelineCount}</td>
+                                                <td class="r divider green">{row.realRevenueDisplay}</td>
+                                                <td class="r green">{row.bookedRevenueDisplay}</td>
+                                                <td class="muted">{row.acceptedCompanies}</td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                        <template if:false={studentCohortRows.length}>
+                            <div class="gkd-empty">該当データなし（年度・卒年・CA フィルタを確認してください）</div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+            </template>
+
+            <!-- 送客セクション (Phase 3: トグルで切替・遅延ロード) -->
+            <template if:true={isSoukyaku}>
+                <div class="gkd-soukyaku-wrap">
+                    <template if:true={isSoukyakuLoading}>
+                        <div class="gkd-loading-wrap" style="padding:40px 0;text-align:center;">
+                            <lightning-spinner alternative-text="送客データ読込中" size="medium"></lightning-spinner>
+                        </div>
+                    </template>
+                    <template if:false={isSoukyakuLoading}>
+                        <!-- 期間切替セグメント + 担当CA選択 -->
+                        <div class="gkd-period-bar">
+                            <span class="gkd-period-label">期間</span>
+                            <template for:each={soukyakuPeriodOptions} for:item="opt">
+                                <button key={opt.key} class={opt.cls} data-period={opt.key} onclick={handleSoukyakuPeriodChange}>{opt.label}</button>
+                            </template>
+                            <span class="gkd-period-label" style="margin-left:16px;">担当CA</span>
+                            <lightning-combobox label="担当CA" variant="label-hidden"
+                                value={_selectedSoukyakuCA} options={soukyakuCAOptions}
+                                onchange={handleSoukyakuCAChange} class="gkd-filter-select">
+                            </lightning-combobox>
+                        </div>
+
+                        <!-- 送客 固定サマリーバー -->
+                        <div class="gkd-fixed-summary">
+                            <div class="gkd-fsum-item">
+                                <span class="gkd-fsum-label">送客件数</span>
+                                <span class="gkd-fsum-value">{soukyakuSummary.soukyakuCount}<span class="gkd-fsum-unit">件</span></span>
+                            </div>
+                            <div class="gkd-fsum-arrow">
+                                <span class="gkd-fsum-rate">{soukyakuAttendanceRatePct}</span>
+                                <span class="gkd-fsum-arrow-icon">→</span>
+                            </div>
+                            <div class="gkd-fsum-item">
+                                <span class="gkd-fsum-label">着座件数</span>
+                                <span class="gkd-fsum-value">{soukyakuSummary.attendanceCount}<span class="gkd-fsum-unit">件</span></span>
+                            </div>
+                            <div class="gkd-fsum-divider"></div>
+                            <div class="gkd-fsum-item gkd-fsum-green">
+                                <span class="gkd-fsum-label">売上</span>
+                                <span class="gkd-fsum-value gkd-green">¥{soukyakuSummary.revenue}</span>
+                            </div>
+                            <div class="gkd-fsum-item">
+                                <span class="gkd-fsum-label">平均単価</span>
+                                <span class="gkd-fsum-value">¥{soukyakuSummary.avgUnitPrice}</span>
+                            </div>
+                            <div class="gkd-fsum-item">
+                                <span class="gkd-fsum-label">目標達成率</span>
+                                <span class="gkd-fsum-value">{soukyakuSummary.targetAchievementRate}<span class="gkd-fsum-unit">%</span></span>
+                            </div>
+                        </div>
+
+                        <!-- カスタムタブナビ (紹介と同じ) -->
+                        <div class="gkd-tabnav">
+                            <button class={souTab0Class} onclick={handleSoukyakuTab} data-tab="0">月別トレンド</button>
+                            <button class={souTab1Class} onclick={handleSoukyakuTab} data-tab="1">担当者別 KPI</button>
+                            <button class={souTab2Class} onclick={handleSoukyakuTab} data-tab="2">イベント別 KPI</button>
+                            <button class={souTab5Class} onclick={handleSoukyakuTab} data-tab="5">企業別 KPI</button>
+                            <button class={souTab3Class} onclick={handleSoukyakuTab} data-tab="3">ノーショー分析</button>
+                            <button class={souTab4Class} onclick={handleSoukyakuTab} data-tab="4">単価分析</button>
+                        </div>
+
+                        <!-- Tab 1: 担当者別 KPI（期間集計 + 月次ヒートマップ） -->
+                        <template if:true={isSouTab1}>
+                            <div class="gkd-panel" style="margin-bottom:12px;">
+                                <div class="gkd-panel-title">担当者別 KPI（期間集計）</div>
+                                <template if:true={isSoukyakuCALoading}>
+                                    <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                                </template>
+                                <template if:false={isSoukyakuCALoading}>
+                                    <template if:true={hasSoukyakuByCA}>
+                                        <div class="gkd-table-wrap">
+                                            <table class="gkd-table">
+                                                <thead>
+                                                    <tr><th>CA名</th><th class="r">送客数</th><th class="r">着座数</th><th class="r">着座率</th><th class="r">平均単価</th><th class="r">売上</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template for:each={soukyakuByCA} for:item="row">
+                                                        <tr key={row.caName}>
+                                                            <td class="name-cell">{row.caName}</td>
+                                                            <td class="r">{row.soukyakuCount}</td>
+                                                            <td class="r">{row.attendanceCount}</td>
+                                                            <td class="r muted">{row.attendanceRate}%</td>
+                                                            <td class="r">¥{row.avgUnitPriceFormatted}</td>
+                                                            <td class="r green">¥{row.revenueFormatted}</td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </template>
+                                    <template if:false={hasSoukyakuByCA}>
+                                        <div class="gkd-empty">該当データなし</div>
+                                    </template>
+                                </template>
+                            </div>
+                            <div class="gkd-panel">
+                                <div class="gkd-panel-title">個人別月次売上（{selectedYear}年度・送客売上）</div>
+                                <template if:true={isSoukyakuCAMonthlyLoading}>
+                                    <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                                </template>
+                                <template if:false={isSoukyakuCAMonthlyLoading}>
+                                    <template if:true={hasSoukyakuByCAMonthly}>
+                                        <div class="gkd-table-wrap gkd-cm-wrap">
+                                            <table class="gkd-table gkd-cm-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="gkd-cm-th-name">担当CA</th>
+                                                        <template for:each={fyMonthLabels} for:item="m">
+                                                            <th key={m.key} class="gkd-cm-th-month">{m.label}</th>
+                                                        </template>
+                                                        <th class="gkd-cm-th-total">着座</th>
+                                                        <th class="gkd-cm-th-total">合計売上</th>
+                                                        <th class="gkd-cm-th-bar"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template for:each={soukyakuByCAMonthly.rows} for:item="row">
+                                                        <tr key={row.caName}>
+                                                            <td class="gkd-cm-name">{row.caName}</td>
+                                                            <template for:each={row.months} for:item="m">
+                                                                <td key={m.key} class={m.cellClass}>{m.revDisplay}</td>
+                                                            </template>
+                                                            <td class="gkd-cm-total c">{row.totalAttendance}</td>
+                                                            <td class="gkd-cm-total r amber">{row.totalRevDisplay}</td>
+                                                            <td class="gkd-cm-bar-cell"><div class="gkd-cm-bar" style={row.barStyle}></div></td>
+                                                        </tr>
+                                                    </template>
+                                                    <tr class="gkd-cm-footer">
+                                                        <td class="gkd-cm-name">合計</td>
+                                                        <template for:each={soukyakuByCAMonthly.totals} for:item="m">
+                                                            <td key={m.key} class={m.cellClass}>{m.revDisplay}</td>
+                                                        </template>
+                                                        <td class="gkd-cm-total c">{soukyakuByCAMonthly.grandAttendance}</td>
+                                                        <td class="gkd-cm-total r amber">{soukyakuByCAMonthly.grandRevDisplay}</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </template>
+                                    <template if:false={hasSoukyakuByCAMonthly}>
+                                        <div class="gkd-empty">該当データなし</div>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Tab 2: イベント別 KPI -->
+                        <template if:true={isSouTab2}>
+                            <div class="gkd-panel">
+                                <div class="gkd-panel-title">イベント別 KPI</div>
+                                <template if:true={isSoukyakuEventLoading}>
+                                    <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                                </template>
+                                <template if:false={isSoukyakuEventLoading}>
+                                    <template if:true={hasSoukyakuByEvent}>
+                                        <div class="gkd-table-wrap">
+                                            <table class="gkd-table">
+                                                <thead>
+                                                    <tr><th>イベント</th><th>企業</th><th>状況</th><th class="r">送客数</th><th class="r">着座数</th><th class="r">着座率</th><th class="r">平均単価</th><th class="r">売上</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template for:each={soukyakuByEvent} for:item="row">
+                                                        <tr key={row.eventId}>
+                                                            <td class="name-cell">{row.eventName}</td>
+                                                            <td>{row.companyName}</td>
+                                                            <td>{row.status}</td>
+                                                            <td class="r">{row.soukyakuCount}</td>
+                                                            <td class="r">{row.attendanceCount}</td>
+                                                            <td class="r muted">{row.attendanceRate}%</td>
+                                                            <td class="r">¥{row.avgUnitPriceFormatted}</td>
+                                                            <td class="r green">¥{row.revenueFormatted}</td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </template>
+                                    <template if:false={hasSoukyakuByEvent}>
+                                        <div class="gkd-empty">該当データなし</div>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Tab 5: 企業別 KPI（送客先クライアント単位） -->
+                        <template if:true={isSouTab5}>
+                            <div class="gkd-panel">
+                                <div class="gkd-panel-title">企業別 KPI（送客先クライアント単位）</div>
+                                <template if:true={isSoukyakuClientLoading}>
+                                    <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                                </template>
+                                <template if:false={isSoukyakuClientLoading}>
+                                    <template if:true={hasSoukyakuByClient}>
+                                        <div class="gkd-table-wrap">
+                                            <table class="gkd-table">
+                                                <thead>
+                                                    <tr><th>企業名</th><th class="r">イベント数</th><th class="r">送客数</th><th class="r">着座数</th><th class="r">着座率</th><th class="r">平均単価</th><th class="r">売上</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template for:each={soukyakuByClient} for:item="row">
+                                                        <tr key={row.clientId}>
+                                                            <td class="name-cell">{row.clientName}</td>
+                                                            <td class="r">{row.eventCount}</td>
+                                                            <td class="r">{row.soukyakuCount}</td>
+                                                            <td class="r">{row.attendanceCount}</td>
+                                                            <td class="r muted">{row.attendanceRate}%</td>
+                                                            <td class="r">{row.avgUnitPriceDisplay}</td>
+                                                            <td class="r green">{row.revenueDisplay}</td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </template>
+                                    <template if:false={hasSoukyakuByClient}>
+                                        <div class="gkd-empty">該当データなし</div>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Tab 0: 月別トレンド -->
+                        <template if:true={isSouTab0}>
+                            <template if:true={isSoukyakuMonthlyLoading}>
+                                <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                            </template>
+                            <template if:false={isSoukyakuMonthlyLoading}>
+                                <template if:true={hasSoukyakuMonthly}>
+                                    <!-- 送客数・着座数グラフ（2列・共通縦軸） -->
+                                    <div class="gkd-two-col" style="margin-bottom:12px;gap:12px;">
+                                        <div class="gkd-panel">
+                                            <div class="gkd-panel-title">月別送客数</div>
+                                            <div class="gkd-chart-wrap">
+                                                <svg viewBox="0 0 620 140" class="gkd-svg">
+                                                    <template for:each={soukyakuCountGridLines} for:item="line">
+                                                        <line key={line.key} x1="44" y1={line.y} x2="610" y2={line.y} stroke="#dde2e8" stroke-width="1"></line>
+                                                        <text key={line.key} x="40" y={line.labelY} text-anchor="end" fill="#9ea5ad" font-size="9">{line.label}</text>
+                                                    </template>
+                                                    <template for:each={soukyakuSentBars} for:item="bar">
+                                                        <g key={bar.key}>
+                                                            <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} fill="#0176d3" rx="2" opacity="0.85"></rect>
+                                                            <template if:true={bar.hasVal}>
+                                                                <text x={bar.centerX} y={bar.countY} text-anchor="middle" fill="#0058a3" font-size="8">{bar.value}</text>
+                                                            </template>
+                                                            <text x={bar.centerX} y="136" text-anchor="middle" fill="#9ea5ad" font-size="8">{bar.label}</text>
+                                                        </g>
+                                                    </template>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                        <div class="gkd-panel">
+                                            <div class="gkd-panel-title">月別着座数</div>
+                                            <div class="gkd-chart-wrap">
+                                                <svg viewBox="0 0 620 140" class="gkd-svg">
+                                                    <template for:each={soukyakuCountGridLines} for:item="line">
+                                                        <line key={line.key} x1="44" y1={line.y} x2="610" y2={line.y} stroke="#dde2e8" stroke-width="1"></line>
+                                                        <text key={line.key} x="40" y={line.labelY} text-anchor="end" fill="#9ea5ad" font-size="9">{line.label}</text>
+                                                    </template>
+                                                    <template for:each={soukyakuAttendedBars} for:item="bar">
+                                                        <g key={bar.key}>
+                                                            <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} fill="#9b59b6" rx="2" opacity="0.8"></rect>
+                                                            <template if:true={bar.hasVal}>
+                                                                <text x={bar.centerX} y={bar.countY} text-anchor="middle" fill="#6c3483" font-size="8">{bar.value}</text>
+                                                            </template>
+                                                            <text x={bar.centerX} y="136" text-anchor="middle" fill="#9ea5ad" font-size="8">{bar.label}</text>
+                                                        </g>
+                                                    </template>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- 月別売上グラフ（万表記） -->
+                                    <div class="gkd-panel" style="margin-bottom:12px;">
+                                        <div class="gkd-panel-title">月別売上</div>
+                                        <div class="gkd-chart-wrap">
+                                            <svg viewBox="0 0 620 140" class="gkd-svg">
+                                                <template for:each={soukyakuRevGridLines} for:item="line">
+                                                    <line key={line.key} x1="44" y1={line.y} x2="610" y2={line.y} stroke="#dde2e8" stroke-width="1"></line>
+                                                    <text key={line.key} x="40" y={line.labelY} text-anchor="end" fill="#9ea5ad" font-size="8">{line.label}</text>
+                                                </template>
+                                                <template for:each={soukyakuRevBars} for:item="bar">
+                                                    <g key={bar.key}>
+                                                        <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} fill="#2e844a" rx="2" opacity="0.8"></rect>
+                                                        <template if:true={bar.hasVal}>
+                                                            <text x={bar.centerX} y={bar.countY} text-anchor="middle" fill="#1c5c30" font-size="7">{bar.valLabel}</text>
+                                                        </template>
+                                                        <text x={bar.centerX} y="136" text-anchor="middle" fill="#9ea5ad" font-size="8">{bar.label}</text>
+                                                    </g>
+                                                </template>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <!-- 月別詳細テーブル -->
+                                    <div class="gkd-panel" style="margin-bottom:12px;">
+                                        <div class="gkd-panel-title">月別詳細</div>
+                                        <div class="gkd-table-wrap">
+                                            <table class="gkd-table">
+                                                <thead><tr><th>月</th><th class="r">送客数</th><th class="r">着座数</th><th class="r">着座率</th><th class="r">売上</th></tr></thead>
+                                                <tbody>
+                                                    <template for:each={soukyakuMonthly.monthly} for:item="row">
+                                                        <tr key={row.label}>
+                                                            <td class="name-cell">{row.label}</td>
+                                                            <td class="r">{row.soukyakuCount}</td>
+                                                            <td class="r">{row.attendanceCount}</td>
+                                                            <td class="r muted">{row.attendanceRate}</td>
+                                                            <td class="r green">{row.revenueDisplay}</td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr class="total-row">
+                                                        <td>合計</td>
+                                                        <td class="r">{soukyakuMonthly.total.soukyakuCount}</td>
+                                                        <td class="r">{soukyakuMonthly.total.attendanceCount}</td>
+                                                        <td class="r muted">{soukyakuMonthly.total.attendanceRate}</td>
+                                                        <td class="r green">{soukyakuMonthly.total.revenueDisplay}</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <!-- 四半期テーブル -->
+                                    <div class="gkd-panel">
+                                        <div class="gkd-panel-title">四半期</div>
+                                        <div class="gkd-table-wrap">
+                                            <table class="gkd-table">
+                                                <thead><tr><th>四半期</th><th class="r">送客数</th><th class="r">着座数</th><th class="r">着座率</th><th class="r">売上</th></tr></thead>
+                                                <tbody>
+                                                    <template for:each={soukyakuMonthly.quarterly} for:item="row">
+                                                        <tr key={row.label}>
+                                                            <td class="name-cell">{row.label}</td>
+                                                            <td class="r">{row.soukyakuCount}</td>
+                                                            <td class="r">{row.attendanceCount}</td>
+                                                            <td class="r muted">{row.attendanceRate}</td>
+                                                            <td class="r green">{row.revenueDisplay}</td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
+                        </template>
+
+                        <!-- Tab 3: ノーショー分析 -->
+                        <template if:true={isSouTab3}>
+                            <div class="gkd-panel" style="margin-bottom:12px;">
+                                <div class="gkd-panel-title">ノーショー分析｜着座予定だったのに来なかった人（予定日が過ぎた分のみ集計）</div>
+                                <template if:true={isSoukyakuNoShowLoading}>
+                                    <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                                </template>
+                                <template if:false={isSoukyakuNoShowLoading}>
+                                    <template if:true={hasSoukyakuNoShow}>
+                                        <!-- 全体カード -->
+                                        <div class="gkd-fixed-summary" style="margin-bottom:12px;">
+                                            <div class="gkd-fsum-item">
+                                                <span class="gkd-fsum-label">予定数</span>
+                                                <span class="gkd-fsum-value">{soukyakuNoShow.expectedCount}<span class="gkd-fsum-unit">件</span></span>
+                                            </div>
+                                            <div class="gkd-fsum-item">
+                                                <span class="gkd-fsum-label">着座数</span>
+                                                <span class="gkd-fsum-value">{soukyakuNoShow.attendedCount}<span class="gkd-fsum-unit">件</span></span>
+                                            </div>
+                                            <div class="gkd-fsum-item">
+                                                <span class="gkd-fsum-label">ノーショー数</span>
+                                                <span class="gkd-fsum-value">{soukyakuNoShow.noShowCount}<span class="gkd-fsum-unit">件</span></span>
+                                            </div>
+                                            <div class="gkd-fsum-item gkd-fsum-amber">
+                                                <span class="gkd-fsum-label">ノーショー率</span>
+                                                <span class="gkd-fsum-value gkd-amber">{soukyakuNoShow.noShowRate}<span class="gkd-fsum-unit">%</span></span>
+                                            </div>
+                                            <div class="gkd-fsum-item gkd-fsum-amber">
+                                                <span class="gkd-fsum-label">未着座金額（概算）</span>
+                                                <span class="gkd-fsum-value gkd-amber">{soukyakuNoShow.lostAmountDisplay}</span>
+                                            </div>
+                                        </div>
+                                        <!-- 自分 vs 全体（担当CA選択時のみ・1on1用） -->
+                                        <template if:true={soukyakuNoShow.hasSelected}>
+                                            <div class="gkd-fixed-summary" style="margin-bottom:12px;">
+                                                <div class="gkd-fsum-item">
+                                                    <span class="gkd-fsum-label">{soukyakuNoShow.selCaName}（自分）ノーショー率</span>
+                                                    <span class="gkd-fsum-value">{soukyakuNoShow.selNoShowRate}<span class="gkd-fsum-unit">%</span></span>
+                                                </div>
+                                                <div class="gkd-fsum-item">
+                                                    <span class="gkd-fsum-label">全体平均</span>
+                                                    <span class="gkd-fsum-value">{soukyakuNoShow.noShowRate}<span class="gkd-fsum-unit">%</span></span>
+                                                </div>
+                                                <div class="gkd-fsum-item">
+                                                    <span class="gkd-fsum-label">全体との差</span>
+                                                    <span class={soukyakuNoShow.selDiffClass} style="font-size:var(--gkd-fs-xl);font-weight:700;line-height:1.2;">{soukyakuNoShow.selDiffDisplay}</span>
+                                                </div>
+                                                <div class="gkd-fsum-item">
+                                                    <span class="gkd-fsum-label">自分の未着座金額（概算）</span>
+                                                    <span class="gkd-fsum-value">{soukyakuNoShow.selLostAmountDisplay}</span>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <!-- 内訳トグル（学歴ランク別 / 曜日別） -->
+                                        <div class="gkd-period-bar" style="margin-bottom:8px;">
+                                            <span class="gkd-period-label">内訳</span>
+                                            <button class={noShowAxisRankClass} data-axis="rank" onclick={handleNoShowAxisChange}>学歴ランク別</button>
+                                            <button class={noShowAxisDowClass} data-axis="dow" onclick={handleNoShowAxisChange}>曜日別</button>
+                                        </div>
+                                        <template if:true={hasNoShowSegRows}>
+                                            <div class="gkd-table-wrap">
+                                                <table class="gkd-table">
+                                                    <thead>
+                                                        <tr><th>{noShowSegHeader}</th><th class="r">予定</th><th class="r">着座</th><th class="r">ノーショー</th><th class="r">ノーショー率</th></tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template for:each={noShowSegRows} for:item="row">
+                                                            <tr key={row.key}>
+                                                                <td class="name-cell">{row.label}</td>
+                                                                <td class="r">{row.expectedCount}</td>
+                                                                <td class="r">{row.attendedCount}</td>
+                                                                <td class="r">{row.noShowCount}</td>
+                                                                <td class="r muted">{row.noShowRate}%</td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </template>
+                                    </template>
+                                    <template if:false={hasSoukyakuNoShow}>
+                                        <div class="gkd-empty">期間内に過去の着座予定はありません</div>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Tab 4: 単価分析 -->
+                        <template if:true={isSouTab4}>
+                            <div class="gkd-panel">
+                                <div class="gkd-panel-title">単価分析</div>
+                                <template if:true={isSoukyakuUnitPriceLoading}>
+                                    <div class="gkd-loading-inline"><lightning-spinner size="small"></lightning-spinner></div>
+                                </template>
+                                <template if:false={isSoukyakuUnitPriceLoading}>
+                                    <template if:true={soukyakuUnitPrice}>
+                                        <template if:false={soukyakuUnitPrice.hasData}>
+                                            <div class="gkd-sou-notice">
+                                                <p>📋 {soukyakuUnitPrice.message}</p>
+                                            </div>
+                                        </template>
+                                        <template if:true={soukyakuUnitPrice.hasData}>
+                                            <p style="padding:16px;">{soukyakuUnitPrice.message}</p>
+                                        </template>
+                                    </template>
+                                </template>
+                            </div>
+                        </template>
+                    </template>
+                </div>
+            </template>
+        </template>
+
+    </div>
+
+    <!-- 個人別月次計上売上 内訳モーダル -->
+    <template if:true={showCmDetailModal}>
+        <div class="gkd-modal-backdrop" onclick={handleCmDetailClose}></div>
+        <div class="gkd-modal">
+            <div class="gkd-modal-header">
+                <div class="gkd-modal-title-wrap">
+                    <span class="gkd-modal-title">{cmDetailTitle}</span>
+                    <span class="gkd-modal-subtitle">合計 {cmDetailTotal}</span>
+                </div>
+                <button class="gkd-modal-close" onclick={handleCmDetailClose}>✕</button>
+            </div>
+            <div class="gkd-modal-body">
+                <template if:true={cmDetailRows.length}>
+                    <div class="gkd-table-wrap">
+                        <table class="gkd-table">
+                            <thead>
+                                <tr>
+                                    <th>学生名</th>
+                                    <th>企業名</th>
+                                    <th>ステータス</th>
+                                    <th class="r">承諾日</th>
+                                    <th class="r">単価</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={cmDetailRows} for:item="row">
+                                    <tr key={row.pipelineId}>
+                                        <td>{row.studentName}</td>
+                                        <td>{row.companyName}</td>
+                                        <td><span class={row.statusClass}>{row.statusLabel}</span></td>
+                                        <td class="r muted">{row.acceptDateDisplay}</td>
+                                        <td class="r amber">{row.unitPriceDisplay}</td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+                <template if:false={cmDetailRows.length}>
+                    <div class="gkd-empty">内訳データがありません</div>
+                </template>
+            </div>
+        </div>
+    </template>
+
+    <!-- 詳細編集モーダル -->
+    <template if:true={showDetailModal}>
+        <div class="gkd-modal-backdrop" onclick={handleCloseModal}></div>
+        <div class="gkd-modal gkd-modal--wide">
+            <div class="gkd-modal-header">
+                <div class="gkd-modal-title-wrap">
+                    <span class="gkd-modal-title">選考詳細編集</span>
+                    <span class="gkd-modal-subtitle">{detailStudentName} ／ {detailCompanyName}</span>
+                </div>
+                <button class="gkd-modal-close" onclick={handleCloseModal}>✕</button>
+            </div>
+            <div class="gkd-modal-body gkd-modal-body--cols">
+
+                <!-- 左カラム: 基本フィールド -->
+                <div class="gkd-modal-col-left">
+                    <div class="gkd-modal-section-title">基本情報</div>
+                    <lightning-record-edit-form
+                        record-id={detailPipelineId}
+                        object-api-name="pipeline__c"
+                        onsuccess={handleModalSaved}>
+                        <lightning-messages></lightning-messages>
+                        <div class="gkd-modal-fields">
+                            <lightning-input-field field-name="status__c"></lightning-input-field>
+                            <lightning-input-field field-name="gfaaccuracy__c"></lightning-input-field>
+                            <lightning-input-field field-name="ExpectedAppropriatingMonth__c"></lightning-input-field>
+                            <lightning-input-field field-name="unitprice__c"></lightning-input-field>
+                            <lightning-input-field field-name="YomiGrade__c"></lightning-input-field>
+                        </div>
+                        <div class="gkd-modal-section-title" style="margin-top:12px">選考日程</div>
+                        <div class="gkd-modal-fields gkd-modal-fields--dates">
+                            <lightning-input-field field-name="Setsumeikai__c"></lightning-input-field>
+                            <lightning-input-field field-name="First__c"></lightning-input-field>
+                            <lightning-input-field field-name="Second__c"></lightning-input-field>
+                            <lightning-input-field field-name="Third__c"></lightning-input-field>
+                            <lightning-input-field field-name="Last__c"></lightning-input-field>
+                            <lightning-input-field field-name="Field11__c"></lightning-input-field>
+                            <lightning-input-field field-name="Field12__c"></lightning-input-field>
+                        </div>
+                        <div class="gkd-modal-footer">
+                            <button class="gkd-cancel-btn" onclick={handleCloseModal}>キャンセル</button>
+                            <lightning-button type="submit" variant="brand" label="保存"></lightning-button>
+                        </div>
+                    </lightning-record-edit-form>
+                </div>
+
+                <!-- 右カラム: 承諾チェックリスト -->
+                <div class="gkd-modal-col-right">
+                    <div class="gkd-modal-section-title">承諾グレード チェックリスト</div>
+
+                    <!-- 推奨グレード表示 -->
+                    <div class="gkd-checklist-grade-bar">
+                        <div class="gkd-checklist-progress">
+                            <div class="gkd-checklist-progress-fill" style={checklistProgressStyle}></div>
+                        </div>
+                        <span class="gkd-checklist-score">{checklistCheckedCount} / 10</span>
+                        <div class="gkd-checklist-recommend">
+                            <span class="gkd-checklist-recommend-label">推奨精度</span>
+                            <span class={checklistGradeClass}>{checklistRecommendedGrade}</span>
+                        </div>
+                    </div>
+
+                    <!-- チェック項目 -->
+                    <div class="gkd-checklist-items">
+                        <template for:each={checklistItems} for:item="item">
+                            <label key={item.key} class={item.itemClass} data-key={item.key} onclick={handleChecklistToggle}>
+                                <span class={item.checkClass}></span>
+                                <span class="gkd-cl-text">{item.label}</span>
+                            </label>
+                        </template>
+                    </div>
+
+                    <div class="gkd-checklist-footer">
+                        <button class="gkd-save-btn" onclick={handleSaveChecklist}>チェックリストを保存</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </template>
+</template>

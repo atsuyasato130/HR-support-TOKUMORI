@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
 Phase 1: 27卒求人票 不足フィールド一括補完スクリプト
-対象: GfaRecruitingStatus__c IN ('募集中','契約済') AND student_year__c INCLUDES ('27卒')
+対象: GfaRecruitingStatus__c IN ('稼働中','契約中') AND student_year__c INCLUDES ('27卒')
 更新フィールド: Req_Gakuchika__c, Req_Thinking__c, Req_Character__c, Req_Execution__c,
               Req_Interpersonal__c, Req_JobHunting__c, RecommendedScale__c,
               TargetHireCount__c, EstimatedSalary__c
+
+注意:
+  RecommendedScale__c は学生 Account.DesiredCompanyScale__pc と集合積でマッチさせるため、
+  同一の値ドメイン（大手/中堅/中小/メガベンチャー/ベンチャー/スタートアップ）で出力する。
 """
 
 import os
@@ -88,21 +92,30 @@ def map_rank_req(rank_field: str) -> str:
 
 
 def map_scale(segment: str) -> str:
-    """segment__c → RecommendedScale__c（複数選択可のセミコロン区切り）"""
-    segment = str(segment or "").strip()
+    """segment__c → RecommendedScale__c（複数選択・セミコロン区切り）
+
+    学生 Account.DesiredCompanyScale__pc と同一ドメイン
+    （大手/中堅/中小/メガベンチャー/ベンチャー/スタートアップ）で出力し、
+    run_matching の集合積マッチが成立するようにする。
+    segment__c に複数値があれば対応する規模を全て返す。
+    """
+    # 求人票 segment 表現 → 学生ドメインの規模値
     mapping = {
-        "大手": "大企業（1,001名以上）",
-        "中堅": "中企業（101〜1,000名）",
-        "中小": "中企業（101〜1,000名）;小企業（〜100名）",
-        "ベンチャー": "小企業（〜100名）",
-        "スタートアップ": "小企業（〜100名）",
+        "大手": "大手",
+        "中堅": "中堅",
+        "中小": "中小",
+        "メガベンチャー": "メガベンチャー",
+        "メガベン": "メガベンチャー",
+        "ベンチャー": "ベンチャー",
+        "スタートアップ": "スタートアップ",
     }
-    # セミコロン区切りで複数あれば最初のものを使用
-    first_seg = segment.split(";")[0].strip() if ";" in segment else segment
-    for key, val in mapping.items():
-        if key in first_seg:
-            return val
-    return ""
+    items = [s.strip() for s in str(segment or "").split(";") if s.strip()]
+    result: list[str] = []
+    for seg in items:
+        for key, val in mapping.items():
+            if key in seg and val not in result:
+                result.append(val)
+    return ";".join(result)
 
 
 def map_salary(annual_income_width: str):
@@ -122,9 +135,12 @@ def map_salary(annual_income_width: str):
 
 # ─── メイン処理 ──────────────────────────────────────────────────────────────
 
-def main(dry_run: bool = True):
-    # 27卒の募集中・契約済求人票を取得
-    soql = """
+def main(dry_run=True, force_scale=False, years=None):
+    # 対象卒年の稼働中・契約中求人票を取得（INCLUDES は複数値=OR）
+    years = years or ["26卒", "27卒", "28卒"]
+    years_clause = ", ".join(f"'{y}'" for y in years)
+    print(f"対象卒年: {', '.join(years)}")
+    soql = f"""
         SELECT Id, Name, company_name__c,
                gakuchikapower_c__c, GfaJobOfferRank__c, segment__c,
                GfaRecruitmentCount__c, GfaAnnualIncomeWidth__c,
@@ -133,7 +149,7 @@ def main(dry_run: bool = True):
                RecommendedScale__c, TargetHireCount__c, EstimatedSalary__c
         FROM JobOfferSlip__c
         WHERE GfaRecruitingStatus__c IN ('稼働中', '契約中')
-        AND student_year__c INCLUDES ('27卒')
+        AND student_year__c INCLUDES ({years_clause})
         ORDER BY company_name__c
     """
     result = sf.query_all(soql)
@@ -170,7 +186,9 @@ def main(dry_run: bool = True):
         if not rec.get("Req_JobHunting__c"):
             updates["Req_JobHunting__c"] = "C"  # 固定デフォルト
 
-        if not rec.get("RecommendedScale__c") and new_scale:
+        # 通常: 空欄のみ補完。--force-scale: 旧ドメイン値を新ドメインで上書き再生成
+        cur_scale = rec.get("RecommendedScale__c")
+        if new_scale and (not cur_scale or force_scale) and cur_scale != new_scale:
             updates["RecommendedScale__c"] = new_scale
 
         recruit_count = rec.get("GfaRecruitmentCount__c")
@@ -206,4 +224,10 @@ def main(dry_run: bool = True):
 
 if __name__ == "__main__":
     dry_run = "--execute" not in sys.argv
-    main(dry_run=dry_run)
+    force_scale = "--force-scale" in sys.argv
+    # --years 26卒,27卒,28卒 で対象卒年を指定（既定: 26/27/28卒）
+    years = None
+    for i, a in enumerate(sys.argv):
+        if a == "--years" and i + 1 < len(sys.argv):
+            years = [y.strip() for y in sys.argv[i + 1].split(",") if y.strip()]
+    main(dry_run=dry_run, force_scale=force_scale, years=years)

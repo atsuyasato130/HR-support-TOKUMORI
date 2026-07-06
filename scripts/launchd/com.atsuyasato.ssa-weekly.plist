@@ -8,7 +8,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/usr/bin/python3</string>
-    <string>/Users/atsuyasato/Claude AI/ai-empire/agents/hr_support/ssa/weekly_runner.py</string>
+    <string>/Users/atsuyasato130/Claude AI/ai-empire/agents/hr_support/ssa/weekly_runner.py</string>
   </array>
 
   <!-- 毎週金曜日 19:00 に実行 -->
@@ -23,13 +23,13 @@
   </dict>
 
   <key>WorkingDirectory</key>
-  <string>/Users/atsuyasato/Claude AI/ai-empire</string>
+  <string>/Users/atsuyasato130/Claude AI/ai-empire</string>
 
   <key>StandardOutPath</key>
-  <string>/Users/atsuyasato/Claude AI/ai-empire/logs/ssa_weekly_stdout.log</string>
+  <string>/Users/atsuyasato130/Claude AI/ai-empire/logs/ssa_weekly_stdout.log</string>
 
   <key>StandardErrorPath</key>
-  <string>/Users/atsuyasato/Claude AI/ai-empire/logs/ssa_weekly_stderr.log</string>
+  <string>/Users/atsuyasato130/Claude AI/ai-empire/logs/ssa_weekly_stderr.log</string>
 
   <key>EnvironmentVariables</key>
   <dict>

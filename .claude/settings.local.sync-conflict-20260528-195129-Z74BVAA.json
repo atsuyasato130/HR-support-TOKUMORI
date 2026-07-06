@@ -1,0 +1,33 @@
+{
+  "enabledMcpjsonServers": ["hr-support"],
+  "permissions": {
+    "allow": [
+      "Bash(python3 /Users/atsuyasato/AItest/slack/bot.py)",
+      "mcp__hr-support__search_salesforce",
+      "mcp__hr-support__update_salesforce_record",
+      "mcp__hr-support__create_salesforce_record",
+      "mcp__hr-support__log_sf_meeting",
+      "mcp__hr-support__get_salesforce_summary",
+      "mcp__hr-support__search_notion",
+      "mcp__hr-support__read_notion_database",
+      "mcp__hr-support__read_notion_page",
+      "mcp__hr-support__create_notion_child_page",
+      "mcp__hr-support__create_notion_page",
+      "mcp__hr-support__archive_notion_page",
+      "mcp__hr-support__update_notion_page",
+      "mcp__hr-support__send_slack_message",
+      "mcp__hr-support__get_slack_channels",
+      "mcp__hr-support__get_slack_messages",
+      "mcp__hr-support__read_google_doc",
+      "mcp__hr-support__search_student_in_spreadsheet",
+      "mcp__hr-support__read_google_spreadsheet",
+      "mcp__hr-support__create_google_spreadsheet",
+      "mcp__hr-support__format_google_spreadsheet",
+      "mcp__hr-support__create_google_doc",
+      "mcp__hr-support__add_sheet_tab",
+      "mcp__hr-support__update_google_spreadsheet",
+      "mcp__hr-support__send_gmail",
+      "mcp__hr-support__read_gmail"
+    ]
+  }
+}

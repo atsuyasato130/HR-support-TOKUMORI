@@ -1,6 +1,6 @@
 {
   "version": "3.1",
-  "updated": "2026-04-22",
+  "updated": "2026-07-02",
   "description": "Tokumori — 全エージェントカタログ（49体・BU別構成）",
   "notice": "このファイルは sync_os.py により empire.db から自動生成されます。手動編集は次回sync時に上書きされます。",
   "agents": [
@@ -542,6 +542,17 @@
         "Claude/Notion"
       ],
       "status": "design"
+    },
+    {
+      "canonical_id": "hr_executor_group_dm_task",
+      "name": "グループDMタスクハンドラー",
+      "bu": "HRsupport",
+      "layer": "Executor",
+      "desc": "Slack純正AI AssistantでグループDM化した会話にhr-support Botを招待し、タスク依頼をキャッチアップして実行(既定は無効・domain_hr.jsonのallowed_channel_idsで許可制)。書き込み系ツールはSF更新/メール送信/LINE送信を除く縮小TOOLSに限定。",
+      "apis": [
+        "Claude/Slack/GSheets/Notion/GCal/Gmail"
+      ],
+      "status": "active"
     }
   ]
 }

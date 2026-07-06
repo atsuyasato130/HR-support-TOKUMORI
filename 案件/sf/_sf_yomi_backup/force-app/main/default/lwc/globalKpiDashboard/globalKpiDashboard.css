@@ -1,0 +1,1146 @@
+/* ===== デザイントークン（シンプル・洗練・落ち着いたトーン） ===== */
+:host {
+    display: block;
+    background: #fafbfc;
+
+    /* テキスト色 — 3階層 */
+    --gkd-text-primary:   #0f172a;   /* near-black slate */
+    --gkd-text-secondary: #64748b;   /* slate-500 */
+    --gkd-text-muted:     #94a3b8;   /* slate-400 */
+
+    /* ボーダー・背景 — 控えめに */
+    --gkd-border:         #e2e8f0;   /* slate-200, より淡く */
+    --gkd-border-soft:    #f1f5f9;   /* slate-100 */
+    --gkd-bg-page:        #fafbfc;
+    --gkd-bg-panel:       #ffffff;
+    --gkd-bg-soft:        #f8fafc;   /* slate-50 */
+    --gkd-bg-row-hover:   #f8fafc;
+
+    /* アクセント — 主役は1色（ネイビー）、状態色は控えめ */
+    --gkd-accent:         #1e40af;   /* indigo-800 落ち着いたネイビー */
+    --gkd-accent-soft:    #eef2ff;   /* indigo-50 */
+    --gkd-accent-hover:   #1e3a8a;   /* indigo-900 */
+    --gkd-success:        #15803d;   /* green-700 落ち着いた緑 */
+    --gkd-success-soft:   #f0fdf4;
+    --gkd-warning:        #b45309;   /* amber-700 */
+    --gkd-warning-soft:   #fffbeb;
+    --gkd-danger:         #b91c1c;   /* red-700 */
+    --gkd-danger-soft:    #fef2f2;
+
+    /* フォントサイズ — 余裕を持って大きめ */
+    --gkd-fs-xs:    11px;   /* キャプション・unit */
+    --gkd-fs-sm:    12px;   /* 補助テキスト */
+    --gkd-fs-base:  13px;   /* デフォルト本文 */
+    --gkd-fs-md:    14px;   /* テーブル本文 */
+    --gkd-fs-lg:    16px;   /* 小見出し */
+    --gkd-fs-xl:    24px;   /* KPI 値 */
+    --gkd-fs-xxl:   32px;   /* 重要KPI 値 */
+
+    /* レイアウト */
+    --gkd-radius:   10px;
+    --gkd-radius-sm: 6px;
+    --gkd-shadow:   0 1px 2px rgba(15,23,42,0.04);
+}
+.gkd-root {
+    background: var(--gkd-bg-page) !important;
+    min-height: 100vh;
+    padding: 20px 24px;
+    font-family: 'Hiragino Sans', 'Yu Gothic UI', sans-serif;
+    color: var(--gkd-text-primary) !important;
+    font-size: var(--gkd-fs-base);
+    line-height: 1.5;
+}
+/* テーブル数値はタビュラー数字で揃える（位取り桁が揃う） */
+.gkd-root table td,
+.gkd-root .gkd-fsum-value,
+.gkd-root .gkd-bkpi-value,
+.gkd-root .gkd-card-value,
+.gkd-root .gkd-stat-value {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== 期間切替セグメント ===== */
+.gkd-period-bar {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 8px; padding: 0 4px;
+}
+.gkd-period-label {
+    font-size: 11px; color: var(--gkd-text-secondary); margin-right: 4px; font-weight: 600;
+}
+.gkd-period-btn {
+    border: 1px solid var(--gkd-border); background: #fff; color: var(--gkd-text-primary);
+    padding: 4px 14px; border-radius: 16px; font-size: 12px;
+    cursor: pointer; font-weight: 600;
+    transition: background 0.12s, border-color 0.12s;
+}
+.gkd-period-btn:hover { background: var(--gkd-accent-soft); border-color: var(--gkd-accent); }
+.gkd-period-btn--active {
+    background: var(--gkd-accent); color: #fff; border-color: var(--gkd-accent);
+}
+.gkd-period-btn--active:hover { background: var(--gkd-accent-hover); border-color: var(--gkd-accent-hover); }
+
+/* ===== 固定サマリーバー ===== */
+.gkd-fixed-summary {
+    display: flex; gap: 0; margin-bottom: 16px;
+    background: var(--gkd-bg-panel); border: 1px solid var(--gkd-border); border-radius: var(--gkd-radius);
+    overflow: hidden; box-shadow: var(--gkd-shadow);
+}
+.gkd-fsum-item {
+    flex: 1; padding: 10px 16px; border-right: 1px solid var(--gkd-border-soft);
+    display: flex; flex-direction: column; gap: 2px;
+}
+.gkd-fsum-item:last-child { border-right: none; }
+.gkd-fsum-label { font-size: var(--gkd-fs-sm); color: var(--gkd-text-secondary); font-weight: 500; }
+.gkd-fsum-value { font-size: var(--gkd-fs-xl); font-weight: 700; color: var(--gkd-text-primary); line-height: 1.2; }
+.gkd-fsum-unit { font-size: var(--gkd-fs-sm); font-weight: 400; color: var(--gkd-text-secondary); margin-left: 2px; }
+.gkd-fsum-green { border-left: 3px solid var(--gkd-success); }
+.gkd-fsum-amber { border-left: 3px solid var(--gkd-warning); }
+.gkd-fsum-arrow {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0 8px; color: var(--gkd-text-muted);
+}
+.gkd-fsum-rate { font-size: var(--gkd-fs-xs); font-weight: 600; color: var(--gkd-accent); white-space: nowrap; }
+.gkd-fsum-arrow-icon { font-size: var(--gkd-fs-lg); color: var(--gkd-text-muted); }
+.gkd-fsum-divider { width: 1px; background: var(--gkd-border); margin: 8px 0; }
+
+/* ===== ファネル + ドーナツ ===== */
+.gkd-funnel-donut-row { display: flex; gap: 24px; align-items: flex-start; }
+.gkd-donut-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 200px; }
+.gkd-donut-svg { width: 180px; height: 180px; }
+.gkd-donut-legend { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.gkd-donut-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.gkd-donut-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.gkd-donut-lbl { flex: 1; color: var(--gkd-text-primary); }
+.gkd-donut-pct { color: var(--gkd-text-secondary); font-weight: 600; }
+
+/* ===== HEADER ===== */
+.gkd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gkd-border);
+}
+.gkd-header-left { display: flex; align-items: center; gap: 10px; }
+.gkd-logo-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gkd-accent);
+}
+.gkd-title { font-size: var(--gkd-fs-lg); font-weight: 600; color: var(--gkd-text-primary); letter-spacing: -0.3px; }
+.gkd-title-sub { font-size: var(--gkd-fs-base); font-weight: 400; color: var(--gkd-text-secondary); margin-left: 6px; }
+.gkd-filters { display: flex; gap: 18px; align-items: center; flex-wrap: nowrap; }
+.gkd-filter-group { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.gkd-filter-label { font-size: var(--gkd-fs-base); font-weight: 500; color: var(--gkd-text-secondary); white-space: nowrap; flex-shrink: 0; }
+.gkd-filter-select { min-width: 120px; max-width: 180px; }
+.gkd-filter-select lightning-combobox { --slds-c-input-color-border: var(--gkd-border); }
+/* lightning-comboboxのデフォルト余白を除去して高さを揃える */
+.gkd-filter-select .slds-form-element { margin-bottom: 0 !important; }
+.gkd-byname-filters .gkd-filter-select { min-width: 110px; }
+
+/* ===== LOADING ===== */
+.gkd-loading, .gkd-loading-inline {
+    display: flex; justify-content: center; align-items: center;
+    min-height: 180px;
+}
+.gkd-loading-inline { min-height: 80px; }
+
+/* ===== SUMMARY CARDS ===== */
+.gkd-summary-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.gkd-card {
+    background: var(--gkd-bg-panel);
+    border: 1px solid var(--gkd-border);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.gkd-card-green { border-left: 3px solid #2e844a; }
+.gkd-card-amber { border-left: 3px solid #c3760d; }
+.gkd-card-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--gkd-text-secondary); font-weight: 600; margin-bottom: 8px;
+}
+.gkd-card-value { font-size: 26px; font-weight: 700; color: var(--gkd-text-primary); line-height: 1; }
+.gkd-unit { font-size: 13px; font-weight: 400; color: var(--gkd-text-secondary); margin-left: 3px; }
+.gkd-green { color: var(--gkd-success); }
+.gkd-amber { color: var(--gkd-warning); }
+
+/* ===== TAB NAV ===== */
+.gkd-tabnav {
+    display: flex; gap: 4px; margin-bottom: 20px;
+    border-bottom: 1px solid var(--gkd-border);
+    padding-bottom: 0;
+    /* タブが多い時に見切れず横スクロールできるようにする */
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+.gkd-tabnav::-webkit-scrollbar { height: 6px; }
+.gkd-tabnav::-webkit-scrollbar-thumb {
+    background: var(--gkd-border); border-radius: 3px;
+}
+.gkd-tabnav::-webkit-scrollbar-track { background: transparent; }
+.gkd-tab {
+    background: none; border: none;
+    border-bottom: 2px solid transparent;
+    padding: 12px 18px; font-size: var(--gkd-fs-md); font-weight: 500;
+    color: var(--gkd-text-secondary); cursor: pointer; margin-bottom: -1px;
+    transition: color 0.12s, border-color 0.12s;
+    white-space: nowrap;
+    letter-spacing: -0.1px;
+    /* スクロール時に各タブが潰れないよう固定幅扱い */
+    flex-shrink: 0;
+}
+.gkd-tab:hover { color: var(--gkd-text-primary); }
+.gkd-tab-active { color: var(--gkd-accent) !important; border-bottom-color: var(--gkd-accent); }
+
+/* ===== PANEL ===== */
+.gkd-panel {
+    background: var(--gkd-bg-panel);
+    border: 1px solid var(--gkd-border);
+    border-radius: var(--gkd-radius);
+    padding: 24px;
+    box-shadow: var(--gkd-shadow);
+}
+.gkd-panel-title {
+    font-size: var(--gkd-fs-md); font-weight: 600;
+    color: var(--gkd-text-primary); margin-bottom: 20px;
+    letter-spacing: -0.1px;
+}
+.gkd-panel-header-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+}
+.gkd-panel-header-row .gkd-panel-title { margin-bottom: 0; }
+
+/* ===== CHART ===== */
+.gkd-chart-wrap {
+    background: var(--gkd-bg-soft);
+    border-radius: var(--gkd-radius-sm);
+    padding: 12px 8px 4px;
+}
+.gkd-svg { width: 100%; height: auto; }
+
+/* ===== TABLE ===== */
+.gkd-table-wrap { overflow-x: auto; }
+.gkd-table {
+    width: 100%; border-collapse: collapse;
+    font-size: var(--gkd-fs-base);
+}
+.gkd-table th {
+    padding: 12px 12px;
+    background: transparent;
+    color: var(--gkd-text-secondary);
+    font-size: var(--gkd-fs-sm);
+    font-weight: 500;
+    border-bottom: 1px solid var(--gkd-border);
+    white-space: nowrap;
+    text-align: left;
+}
+.gkd-table td {
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--gkd-border-soft);
+    color: var(--gkd-text-primary);
+    white-space: nowrap;
+}
+.gkd-table tbody tr:hover td { background: var(--gkd-bg-page); }
+.gkd-table .r { text-align: right; }
+.gkd-table .divider { border-left: 1px solid var(--gkd-border); }
+.name-cell { font-weight: 600; color: var(--gkd-text-primary); }
+.muted { color: var(--gkd-text-secondary); }
+.green { color: var(--gkd-success); font-weight: 600; }
+.amber { color: var(--gkd-warning); font-weight: 600; }
+.gkd-empty { text-align: center; color: var(--gkd-text-muted); padding: 32px; font-size: var(--gkd-fs-md); }
+.total-row td { font-weight: 700; color: var(--gkd-text-primary); background: var(--gkd-border-soft) !important; border-top: 1px solid var(--gkd-border); }
+.gkd-table.gkd-heatmap th.heat-h { padding: 6px 4px; font-size: 11px; min-width: 36px; }
+.gkd-table.gkd-heatmap td.heat-cell {
+    padding: 6px 4px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 36px;
+    border-right: 1px solid #fff;
+}
+.gkd-table.gkd-heatmap tbody tr:hover td.heat-cell { background: inherit; }
+
+/* ===== 母集団 STATS ===== */
+.gkd-stats-row {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 10px; margin-bottom: 20px;
+}
+.gkd-stat-box {
+    background: var(--gkd-bg-soft); border: 1px solid var(--gkd-border); border-radius: 6px; padding: 14px;
+}
+.gkd-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gkd-text-secondary); margin-bottom: 6px; }
+.gkd-stat-value { font-size: 22px; font-weight: 700; color: var(--gkd-text-primary); }
+.gkd-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.gkd-sub-panel {
+    background: var(--gkd-bg-soft); border: 1px solid var(--gkd-border); border-radius: 6px; padding: 14px;
+}
+.gkd-sub-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gkd-text-secondary); margin-bottom: 12px; }
+.gkd-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.gkd-bar-label { font-size: 11px; color: var(--gkd-text-primary); width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.gkd-bar-track { flex: 1; height: 6px; background: var(--gkd-border); border-radius: 3px; overflow: hidden; }
+.gkd-bar-fill { height: 100%; background: var(--gkd-accent); border-radius: 3px; transition: width 0.5s ease; }
+.gkd-bar-purple { background: #6b4fbb; }
+.gkd-bar-count { font-size: 11px; color: var(--gkd-text-secondary); width: 72px; text-align: right; white-space: nowrap; }
+.gkd-pct { color: var(--gkd-text-muted); }
+
+/* ===== バイネームMTG ===== */
+.gkd-byname-filters { display: flex; gap: 12px; align-items: center; flex-wrap: nowrap; }
+
+/* 検索付きCAドロップダウン */
+.gkd-ca-search-wrap { position: relative; min-width: 150px; }
+.gkd-ca-search-input {
+    width: 100%; padding: 0 10px; height: 32px; font-size: 13px;
+    border: 1px solid var(--gkd-border); border-radius: 4px;
+    background: #fff; color: var(--gkd-text-primary); outline: none;
+    box-sizing: border-box;
+}
+.gkd-ca-search-input:focus { border-color: var(--gkd-accent); box-shadow: 0 0 0 2px #0176d320; }
+.gkd-ca-dropdown {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 9999;
+    background: #fff; border: 1px solid var(--gkd-border); border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12); max-height: 220px; overflow-y: auto;
+}
+.gkd-ca-item {
+    padding: 8px 12px; font-size: 13px; color: var(--gkd-text-primary); cursor: pointer;
+}
+.gkd-ca-item:hover { background: var(--gkd-bg-page); }
+.gkd-ca-item-selected { background: #e8f4fd; color: var(--gkd-accent); font-weight: 600; }
+
+/* ===== CA別KPIカードバー ===== */
+.gkd-byname-kpi-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 20px; padding: 16px 20px;
+    background: var(--gkd-bg-panel); border-radius: var(--gkd-radius); border: 1px solid var(--gkd-border);
+}
+.gkd-bkpi-card {
+    display: flex; flex-direction: column; align-items: flex-start;
+    padding: 8px 16px; background: transparent; border-radius: var(--gkd-radius-sm);
+    border: none; min-width: 90px;
+}
+.gkd-bkpi-card--accent { border-color: var(--gkd-success); background: var(--gkd-success-soft); }
+.gkd-bkpi-label { font-size: var(--gkd-fs-sm); font-weight: 500; color: var(--gkd-text-secondary); white-space: nowrap; margin-bottom: 4px; }
+.gkd-bkpi-value { font-size: var(--gkd-fs-xl); font-weight: 700; color: var(--gkd-text-primary); line-height: 1.2; }
+.gkd-bkpi-unit { font-size: var(--gkd-fs-sm); font-weight: 400; color: var(--gkd-text-secondary); margin-left: 2px; }
+.gkd-bkpi-green { color: var(--gkd-success); }
+.gkd-bkpi-amber { color: var(--gkd-warning); }
+.gkd-bkpi-blue  { color: var(--gkd-accent); }
+.gkd-bkpi-funnel-arrow {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 0 4px;
+}
+.gkd-bkpi-rate { font-size: var(--gkd-fs-xs); font-weight: 700; color: var(--gkd-accent); white-space: nowrap; }
+.gkd-bkpi-arrow-icon { font-size: var(--gkd-fs-lg); color: var(--gkd-text-muted); }
+.gkd-bkpi-sep { width: 1px; height: 40px; background: var(--gkd-border); margin: 0 4px; }
+
+/* 学生グループヘッダー追加バッジ */
+.gkd-badge-rate {
+    font-size: var(--gkd-fs-sm); font-weight: 700; color: var(--gkd-accent);
+    background: var(--gkd-accent-soft); padding: 2px 7px; border-radius: 4px;
+}
+.gkd-student-revenue { font-size: 12px; font-weight: 600; }
+
+/* 旧スタイル（後方互換） */
+.gkd-byname-stats { display: flex; gap: 20px; margin-bottom: 14px; padding: 10px 14px; background: var(--gkd-bg-soft); border-radius: 6px; border: 1px solid var(--gkd-border); }
+.gkd-byname-stat { font-size: 12px; color: var(--gkd-text-secondary); }
+.gkd-byname-stat strong { color: var(--gkd-text-primary); }
+/* byname テーブル固定列幅（全グループ統一） */
+.gkd-col-actions   { width: 120px; }
+.gkd-col-company   { width: 200px; }
+.gkd-col-status    { width: 220px; }   /* 「002.説明会参加予定」等の長い値を確実に収める */
+.gkd-col-accuracy  { width: 110px; }   /* 「S（100%）」を確実に収める */
+.gkd-col-yomimonth { width: 130px; }
+.gkd-col-yomi      { width: 100px; }
+.gkd-col-meetings  { width: 70px; }
+.gkd-col-actions-cell { white-space: nowrap; text-align: left; padding-left: 4px !important; }
+.gkd-byname-table { table-layout: fixed; }
+/* th のみ ellipsis を適用、td は dropdown が切れないよう overflow:visible */
+.gkd-byname-table th { overflow: hidden; text-overflow: ellipsis; }
+.gkd-byname-table td { overflow: visible; text-overflow: ellipsis; white-space: nowrap; }
+.gkd-byname-table .name-cell { min-width: unset; }
+/* byname テーブルラッパーは overflow を visible に（dropdown を切らない）
+   横スクロールが必要な場合でも dropdown は外側にも表示される */
+.gkd-byname-table-wrap { overflow: visible !important; }
+/* SLDS dropdown は最前面に */
+.gkd-byname-table .slds-dropdown,
+.gkd-bulk-toolbar .slds-dropdown {
+    z-index: 9999 !important;
+}
+
+.gkd-status-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600;
+    background: var(--gkd-border-soft); color: var(--gkd-text-secondary);
+}
+.gkd-status-accepted { background: #eaf5ec; color: var(--gkd-success); }
+.gkd-status-offer { background: #fdf3e3; color: var(--gkd-warning); }
+.gkd-status-final { background: #e8f4fd; color: var(--gkd-accent); }
+.gkd-status-interview { background: #eef4ff; color: #1a5296; }
+
+.gkd-accuracy {
+    display: inline-block; width: 26px; text-align: center;
+    padding: 2px 4px; border-radius: 4px; font-size: 12px; font-weight: 700;
+}
+.gkd-acc-s { background: #eaf5ec; color: var(--gkd-success); }
+.gkd-acc-a { background: #e8f4fd; color: var(--gkd-accent); }
+.gkd-acc-b { background: #fdf3e3; color: var(--gkd-warning); }
+.gkd-acc-c { background: #fde8e8; color: var(--gkd-danger); }
+
+.gkd-detail-btn {
+    border-radius: var(--gkd-radius-sm); padding: 4px 10px;
+    font-size: var(--gkd-fs-sm); font-weight: 600; cursor: pointer;
+    transition: opacity 0.12s;
+    background: var(--gkd-accent-soft); color: var(--gkd-accent); border: 1px solid var(--gkd-accent);
+}
+.gkd-detail-btn:hover { opacity: 0.85; }
+
+/* ===== 年度サマリー クォーターカード ===== */
+.gkd-quarter-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin-bottom: 20px;
+}
+.gkd-quarter-card {
+    background: var(--gkd-bg-panel); border: 1px solid var(--gkd-border); border-radius: 8px;
+    padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-top: 3px solid #0176d3;
+}
+.gkd-quarter-label { font-size: 11px; font-weight: 700; color: var(--gkd-accent); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.gkd-quarter-period { font-size: 10px; color: var(--gkd-text-muted); margin-bottom: 10px; }
+.gkd-quarter-value { font-size: 22px; font-weight: 700; color: var(--gkd-text-primary); line-height: 1; margin-bottom: 4px; }
+.gkd-quarter-sub { font-size: 11px; color: var(--gkd-text-secondary); }
+
+/* ===== CA別実績ヨミ管理 学生グループ ===== */
+.gkd-student-group {
+    background: var(--gkd-bg-panel); border: 1px solid var(--gkd-border); border-radius: 8px;
+    margin-bottom: 12px; overflow: hidden;
+}
+.gkd-student-group-header {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--gkd-bg-page); padding: 10px 14px;
+    border-bottom: 1px solid var(--gkd-border);
+}
+.gkd-student-name { font-size: 13px; font-weight: 700; color: var(--gkd-text-primary); min-width: 120px; }
+.gkd-student-ca   { font-size: 11px; color: var(--gkd-text-secondary); min-width: 80px; }
+.gkd-student-grad { font-size: 11px; color: var(--gkd-text-secondary); min-width: 40px; }
+/* 右側アイテムをまとめるラッパー → margin-left:auto で右寄せ */
+.gkd-student-count {
+    margin-left: auto; font-size: 11px; color: var(--gkd-text-secondary);
+    background: var(--gkd-bg-panel); border: 1px solid var(--gkd-border); border-radius: 10px;
+    padding: 2px 8px; flex-shrink: 0;
+}
+.gkd-student-accept-rate {
+    flex-shrink: 0; min-width: 54px; text-align: center;
+}
+.gkd-student-revenue {
+    font-size: 12px; font-weight: 600; flex-shrink: 0; min-width: 80px; text-align: right;
+}
+.gkd-student-yomi {
+    font-size: 12px; font-weight: 700; color: var(--gkd-success);
+    flex-shrink: 0; min-width: 80px; text-align: right;
+}
+
+/* ===== 選考ファネル ===== */
+.gkd-funnel-wrap { padding: 8px 0; }
+.gkd-funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.gkd-funnel-label { font-size: 12px; color: var(--gkd-text-primary); width: 110px; flex-shrink: 0; }
+.gkd-funnel-track { flex: 1; height: 18px; background: var(--gkd-border); border-radius: 4px; overflow: hidden; }
+.gkd-funnel-fill { height: 100%; background: var(--gkd-accent); border-radius: 4px; transition: width 0.5s ease; }
+.gkd-funnel-count { font-size: 12px; color: var(--gkd-text-primary); font-weight: 600; width: 100px; text-align: right; white-space: nowrap; }
+
+/* ===== 求人票未設定フォールバック ===== */
+.gkd-company-unset { color: var(--gkd-text-muted); font-style: italic; font-size: 11px; }
+
+/* ===== 詳細編集モーダル ===== */
+.gkd-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 8000;
+}
+.gkd-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 8001; width: 480px; max-width: 95vw; max-height: 85vh;
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    display: flex; flex-direction: column; overflow: visible;
+}
+.gkd-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--gkd-border);
+    background: var(--gkd-bg-soft);
+}
+.gkd-modal-title { font-size: 14px; font-weight: 700; color: var(--gkd-text-primary); }
+.gkd-modal-close {
+    background: none; border: none; font-size: 16px; color: var(--gkd-text-secondary);
+    cursor: pointer; padding: 2px 6px; border-radius: 4px;
+}
+.gkd-modal-close:hover { background: var(--gkd-border-soft); }
+.gkd-modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+.gkd-modal-fields { display: flex; flex-direction: column; gap: 4px; }
+.gkd-modal-footer {
+    padding: 12px 20px; border-top: 1px solid var(--gkd-border);
+    display: flex; justify-content: flex-end; gap: 8px;
+    background: var(--gkd-bg-soft);
+}
+
+/* ワイドモーダル（チェックリスト付き） */
+.gkd-modal--wide { width: 860px; max-height: 90vh; overflow: hidden; }
+.gkd-modal-body--cols { display: flex; gap: 24px; padding: 20px; align-items: flex-start; overflow-y: auto; max-height: calc(90vh - 60px); }
+.gkd-modal-col-left  { flex: 0 0 340px; }
+.gkd-modal-col-right { flex: 1; min-width: 0; }
+.gkd-modal-fields--dates { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+.gkd-modal-section-title {
+    font-size: 11px; font-weight: 700; color: var(--gkd-text-secondary); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--gkd-border);
+}
+.gkd-modal-title-wrap { display: flex; flex-direction: column; gap: 2px; }
+.gkd-modal-subtitle { font-size: 11px; color: var(--gkd-text-secondary); font-weight: 400; }
+
+/* チェックリスト */
+.gkd-checklist-grade-bar {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    background: var(--gkd-bg-soft); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--gkd-border);
+}
+.gkd-checklist-progress {
+    flex: 1; height: 8px; background: #e4e9ef; border-radius: 4px; overflow: hidden;
+}
+.gkd-checklist-progress-fill {
+    height: 100%; background: linear-gradient(90deg, #0176d3, #00d4aa);
+    border-radius: 4px; transition: width 0.3s ease;
+}
+.gkd-checklist-score { font-size: 12px; font-weight: 700; color: var(--gkd-text-primary); white-space: nowrap; }
+.gkd-checklist-recommend { display: flex; align-items: center; gap: 6px; }
+.gkd-checklist-recommend-label { font-size: 10px; color: var(--gkd-text-secondary); white-space: nowrap; }
+.gkd-cl-grade {
+    font-size: 20px; font-weight: 800; width: 28px; text-align: center;
+    line-height: 1; border-radius: 4px; padding: 2px 4px;
+}
+.gkd-cl-grade--s { color: var(--gkd-success); background: #eaf5ec; }
+.gkd-cl-grade--a { color: var(--gkd-accent); background: #e8f4fd; }
+.gkd-cl-grade--b { color: #b45309; background: #fef3c7; }
+.gkd-cl-grade--c { color: var(--gkd-danger); background: #fde8e8; }
+.gkd-cl-grade--d { color: #444; background: var(--gkd-border-soft); }
+
+.gkd-checklist-items { display: flex; flex-direction: column; gap: 6px; }
+.gkd-cl-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 6px; cursor: pointer;
+    border: 1px solid #e4e9ef; background: #fff;
+    transition: background 0.15s, border-color 0.15s;
+    user-select: none;
+}
+.gkd-cl-item:hover { background: var(--gkd-bg-page); }
+.gkd-cl-item--checked { background: #f0faf3; border-color: var(--gkd-success); }
+.gkd-cl-check {
+    width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0;
+    border: 2px solid #c5ccd4; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.gkd-cl-check--on {
+    background: #2e844a; border-color: var(--gkd-success);
+}
+.gkd-cl-check--on::after {
+    content: '✓'; color: #fff; font-size: 11px; font-weight: 700; line-height: 1;
+}
+.gkd-cl-text { font-size: 12px; color: var(--gkd-text-primary); }
+.gkd-cl-item--checked .gkd-cl-text { color: var(--gkd-success); font-weight: 600; }
+.gkd-checklist-footer { margin-top: 14px; display: flex; justify-content: flex-end; }
+
+/* ===== Tab6: ヨミ企業フラグ ===== */
+.gkd-col-yomiflag { width: 60px; }
+.gkd-yomi-flag {
+    background: none; border: none; cursor: pointer;
+    font-size: 16px; color: #c5ccd4; padding: 2px 4px;
+    border-radius: 4px; transition: color 0.15s;
+}
+.gkd-yomi-flag:hover { color: var(--gkd-warning); }
+.gkd-yomi-flag--on { color: var(--gkd-warning); }
+.gkd-table .c { text-align: center; }
+
+/* ===== Tab7: チームヨミ管理 ===== */
+.gkd-ty-month-section { margin-bottom: 20px; }
+.gkd-ty-month-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 14px; background: #1a2332; border-radius: 6px 6px 0 0;
+    border-bottom: 2px solid #0176d3;
+}
+.gkd-ty-month-label { font-size: 13px; font-weight: 700; color: #fff; }
+.gkd-ty-month-count { font-size: 11px; color: var(--gkd-text-muted); background: #2a3547; padding: 2px 8px; border-radius: 10px; }
+.gkd-ty-month-yomi  { font-size: 12px; font-weight: 700; color: var(--gkd-warning); margin-left: auto; }
+
+/* チームヨミテーブル列幅 */
+.gkd-ty-table { table-layout: fixed; }
+.gkd-ty-col-flag     { width: 44px; }
+.gkd-ty-col-student  { width: 110px; }
+.gkd-ty-col-grad     { width: 50px; }
+.gkd-ty-col-ca       { width: 90px; }
+.gkd-ty-col-company  { width: 160px; }
+.gkd-ty-col-yomimonth { width: 78px; }
+.gkd-ty-col-status   { width: 130px; }
+.gkd-ty-col-rate     { width: 58px; }
+.gkd-ty-col-yomi     { width: 90px; }
+.gkd-ty-col-situation { width: 180px; }
+.gkd-ty-col-nadate   { width: 110px; }
+.gkd-ty-col-nadetail { width: 150px; }
+.gkd-ty-col-other    { width: 130px; }
+
+.gkd-ty-table td, .gkd-ty-table th { overflow: hidden; text-overflow: ellipsis; }
+.gkd-ty-student { font-weight: 600; color: var(--gkd-text-primary); }
+
+/* 確度カラー */
+.gkd-ty-rate       { font-size: 12px; font-weight: 700; }
+.gkd-ty-rate--high { color: var(--gkd-success); }
+.gkd-ty-rate--mid  { color: #b45309; }
+.gkd-ty-rate--low  { color: var(--gkd-text-secondary); }
+.gkd-ty-rate-sub   { display: block; font-size: 10px; color: var(--gkd-text-secondary); margin-top: 1px; }
+
+/* インライン入力 */
+.gkd-ty-input {
+    width: 100%; border: none; background: transparent;
+    font-size: 12px; color: var(--gkd-text-primary); padding: 2px 4px;
+    border-radius: 3px; outline: none;
+}
+.gkd-ty-input:focus { background: #f0f4ff; border: 1px solid #0176d3; }
+.gkd-ty-date { font-size: 11px; }
+
+/* 行ハイライト */
+.gkd-ty-row--accepted td { background: #f0faf3 !important; }
+.gkd-ty-row--yomi td     { background: #fde8e8 !important; border-left: 3px solid #c23934; }
+
+/* CSVボタン */
+.gkd-csv-btn {
+    padding: 6px 14px; background: var(--gkd-accent); color: #fff;
+    border: none; border-radius: var(--gkd-radius-sm); font-size: var(--gkd-fs-base);
+    font-weight: 600; cursor: pointer; white-space: nowrap;
+    transition: background 0.12s;
+}
+.gkd-csv-btn:hover { background: var(--gkd-accent-hover); }
+.gkd-ty-col-accuracy { width: 88px; }
+.gkd-native-select--sm {
+    font-size: 11px; padding: 3px 2px;
+    width: 100%; box-sizing: border-box;
+}
+.gkd-inline-input {
+    font-size: 11px; padding: 4px 6px;
+    width: 100%; box-sizing: border-box;
+    border: 1px solid #cbd5e1; border-radius: 4px;
+    background: #fffaeb;
+    font-family: inherit;
+}
+.gkd-inline-input:focus { outline: none; border-color: var(--gkd-accent); background: #fff; }
+.gkd-inline-input--num { text-align: right; }
+
+/* ===== Tab9: 集計基準トグル ===== */
+.gkd-cohort-month-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; gap: 12px;
+}
+.gkd-toggle-group {
+    display: inline-flex; border: 1px solid var(--gkd-border);
+    border-radius: 6px; overflow: hidden;
+}
+.gkd-toggle-btn {
+    background: var(--gkd-bg-panel); border: none; padding: 6px 12px;
+    font-size: 12px; color: var(--gkd-text-secondary); cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+}
+.gkd-toggle-btn:not(:last-child) { border-right: 1px solid var(--gkd-border); }
+.gkd-toggle-btn:hover { background: var(--gkd-bg-page); }
+.gkd-toggle-btn--active {
+    background: var(--gkd-accent); color: #fff; font-weight: 600;
+}
+.gkd-toggle-btn--active:hover { background: var(--gkd-accent); }
+.gkd-ty-col-check    { width: 60px; }
+/* ===== Tab6: 一括操作（チェックボックス・ツールバー） ===== */
+.gkd-col-checkbox { width: 32px; }
+.gkd-row-checkbox {
+    width: 16px; height: 16px; cursor: pointer; accent-color: var(--gkd-accent);
+}
+.gkd-row-selected td {
+    background: #eff6ff !important;
+}
+.gkd-bulk-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(90deg, #1e40af 0%, #1e3a8a 100%);
+    color: #fff; padding: 12px 16px; border-radius: 8px;
+    margin: 12px 0; box-shadow: 0 2px 6px rgba(30,64,175,0.25);
+    flex-wrap: wrap;
+    /* dropdown が他要素より前面に出るよう stacking context 作成 */
+    position: relative; z-index: 100; overflow: visible;
+}
+.gkd-bulk-toolbar lightning-combobox,
+.gkd-bulk-toolbar lightning-input {
+    position: relative; z-index: 101;
+}
+/* combobox の dropdown 部分は別途前面化 */
+.gkd-bulk-input { overflow: visible !important; }
+.gkd-bulk-info {
+    display: flex; align-items: center; gap: 12px;
+    font-weight: 700; font-size: 13px;
+}
+.gkd-bulk-count {
+    background: rgba(255,255,255,0.2); padding: 4px 10px;
+    border-radius: 999px; font-size: 12px;
+}
+.gkd-bulk-warning {
+    color: #fbbf24; font-weight: 600; font-size: 12px;
+}
+.gkd-bulk-fields {
+    display: flex; gap: 8px; flex: 1; min-width: 200px; flex-wrap: wrap;
+}
+.gkd-bulk-input {
+    min-width: 140px; max-width: 180px;
+    --slds-c-input-color-background: #fff;
+    --slds-c-combobox-color-background: #fff;
+}
+.gkd-bulk-actions { display: flex; gap: 8px; }
+.gkd-bulk-apply-btn {
+    padding: 8px 18px; background: #f59e0b; color: #fff;
+    border: none; border-radius: 6px; font-size: 13px;
+    font-weight: 700; cursor: pointer; white-space: nowrap;
+    transition: background 0.15s;
+}
+.gkd-bulk-apply-btn:hover:not(:disabled) { background: #d97706; }
+.gkd-bulk-apply-btn:disabled {
+    background: #94a3b8; cursor: not-allowed; opacity: 0.7;
+}
+.gkd-bulk-clear-btn {
+    padding: 8px 14px; background: rgba(255,255,255,0.15);
+    color: #fff; border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 6px; font-size: 12px; cursor: pointer;
+}
+.gkd-bulk-clear-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* ネイティブ <select> でブラウザネイティブのドロップダウン（切れない・常に最前面） */
+.gkd-native-select {
+    /* 列幅ぴったりに収める（min-widthは設けない） */
+    width: 100%; max-width: 100%; box-sizing: border-box;
+    padding: 3px 6px; border: 1px solid #c9c9c9; border-radius: 4px;
+    background: #fff; font-size: 11px; color: var(--gkd-text-primary);
+    cursor: pointer; outline: none;
+    appearance: auto;
+}
+.gkd-native-select:focus {
+    border-color: var(--gkd-accent); box-shadow: 0 0 0 1px #0176d3;
+}
+/* 行内ドロップダウンは padding 詰め＋セル幅にフィット */
+.gkd-byname-table tbody td { padding: 4px 4px; vertical-align: middle; }
+.gkd-byname-table .gkd-native-select {
+    width: calc(100% - 4px); margin-right: 4px; box-sizing: border-box;
+}
+
+.gkd-bulk-select {
+    min-width: 160px; max-width: 200px;
+    padding: 6px 10px; border: 1px solid #fff; border-radius: 5px;
+    background: #fff; font-size: 13px; color: var(--gkd-text-primary);
+    cursor: pointer; outline: none;
+}
+.gkd-bulk-date {
+    min-width: 140px;
+    padding: 6px 10px; border: 1px solid #fff; border-radius: 5px;
+    background: #fff; font-size: 13px; color: var(--gkd-text-primary);
+    outline: none;
+}
+
+/* 非アクティブ表示トグル */
+.gkd-toggle-label {
+    display: flex; align-items: center; gap: 6px;
+    cursor: pointer; user-select: none;
+    padding: 4px 8px; background: var(--gkd-bg-page); border-radius: 4px;
+    border: 1px solid var(--gkd-border);
+}
+.gkd-toggle-label:hover { background: #e8edf3; }
+.gkd-toggle-label input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: var(--gkd-accent); }
+.gkd-toggle-text { font-size: 11px; color: var(--gkd-text-primary); white-space: nowrap; }
+
+/* ===== Tab9 学生別売上 デザイン統一 ===== */
+.gkd-cohort-filters {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 20px; padding: 14px 16px;
+    background: var(--gkd-bg-soft); border: 1px solid var(--gkd-border);
+    border-radius: var(--gkd-radius);
+}
+.gkd-filter-spacer { margin-left: auto; }
+.gkd-cohort-month-panel {
+    margin-bottom: 16px; padding: 18px 20px;
+    background: var(--gkd-bg-panel); border: 1px solid var(--gkd-border);
+    border-radius: var(--gkd-radius);
+}
+.gkd-cohort-month-title {
+    font-size: var(--gkd-fs-md); font-weight: 600;
+    color: var(--gkd-text-primary); margin-bottom: 14px;
+    letter-spacing: -0.1px;
+}
+.gkd-cohort-month-sub {
+    font-size: var(--gkd-fs-base); font-weight: 400;
+    color: var(--gkd-text-secondary); margin-left: 8px;
+}
+.gkd-cohort-month-panel .gkd-table th {
+    font-size: 10px;          /* 13列詰め込みのため少し小さく */
+    padding: 10px 8px;
+    letter-spacing: 0;
+}
+.gkd-cohort-month-panel .gkd-table td {
+    padding: 10px 8px;
+    font-size: var(--gkd-fs-base);
+}
+/* divider 列を強調 */
+.gkd-cohort-month-panel .gkd-table .divider {
+    border-left: 1px solid var(--gkd-border);
+}
+
+/* 検索ボックス（学生名・企業名 共通） */
+.gkd-name-search {
+    width: 200px; padding: 5px 10px;
+    border: 1px solid var(--gkd-border); border-radius: var(--gkd-radius-sm);
+    font-size: var(--gkd-fs-base); outline: none;
+    background: var(--gkd-bg-panel);
+    color: var(--gkd-text-primary);
+}
+.gkd-name-search:focus {
+    border-color: var(--gkd-accent); box-shadow: 0 0 0 1px var(--gkd-accent);
+}
+.gkd-name-search::placeholder { color: var(--gkd-text-muted); }
+
+/* ===== H1/H2 半期集計 ===== */
+.gkd-half-row { display: flex; gap: 12px; margin-top: 10px; }
+.gkd-half-card {
+    flex: 1; padding: 12px 16px;
+    background: #f8fafc; border: 1px solid var(--gkd-border); border-radius: 6px;
+}
+.gkd-half-label { font-size: 13px; font-weight: 600; color: var(--gkd-text-primary); margin-bottom: 4px; }
+.gkd-half-value { font-size: 20px; font-weight: 700; color: var(--gkd-success); margin-bottom: 2px; }
+
+/* ===== 年度比較パネル ===== */
+.gkd-yoy-panel {
+    margin-top: 12px; padding: 14px 16px;
+    background: #f8fafc; border: 1px solid var(--gkd-border); border-radius: 6px;
+}
+.gkd-yoy-title { font-size: 12px; font-weight: 600; color: var(--gkd-text-secondary); margin-bottom: 10px; }
+.gkd-yoy-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.gkd-yoy-cur-label { width: 70px; font-size: 12px; color: var(--gkd-text-primary); flex-shrink: 0; }
+.gkd-yoy-bar-wrap { flex: 1; height: 14px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+.gkd-yoy-bar { height: 100%; border-radius: 4px; transition: width 0.4s; }
+.gkd-yoy-bar--cur { background: var(--gkd-accent); }
+.gkd-yoy-bar--prev { background: #9ea5ad; }
+.gkd-yoy-rev { width: 110px; font-size: 12px; font-weight: 600; text-align: right; flex-shrink: 0; }
+.gkd-yoy-positive { font-size: 12px; font-weight: 700; color: var(--gkd-success); width: 54px; flex-shrink: 0; }
+.gkd-yoy-negative { font-size: 12px; font-weight: 700; color: var(--gkd-danger); width: 54px; flex-shrink: 0; }
+.gkd-yoy-sub { font-size: 11px; color: var(--gkd-text-secondary); margin-top: 4px; }
+
+/* ===== Tab8: 個人別月次売上 ===== */
+.gkd-cm-wrap { overflow-x: auto; }
+.gkd-cm-table { border-collapse: collapse; min-width: 900px; font-size: 12px; }
+.gkd-cm-table th, .gkd-cm-table td { padding: 6px 8px; border: 1px solid #e5e7eb; white-space: nowrap; }
+.gkd-cm-table thead th { background: #37474F; color: #fff; font-weight: 600; text-align: center; }
+.gkd-cm-th-name { text-align: left !important; min-width: 100px; }
+.gkd-cm-th-month { min-width: 52px; }
+.gkd-cm-th-total { min-width: 60px; }
+.gkd-cm-th-bar { min-width: 80px; }
+.gkd-cm-name { font-weight: 500; color: var(--gkd-text-primary); }
+.gkd-cm-cell { text-align: right; color: var(--gkd-text-muted); }
+.gkd-cm-cell--hit { color: var(--gkd-accent); font-weight: 600; background: #eaf4ff; }
+.gkd-cm-cell--total { color: var(--gkd-text-primary); font-weight: 700; background: #f0f4f8; }
+.gkd-cm-cell--clickable { cursor: pointer; transition: background 0.12s; }
+.gkd-cm-cell--clickable:hover { background: #cfe5fc; }
+.gkd-cm-total { text-align: right; font-weight: 600; }
+.gkd-cm-bar-cell { padding: 4px 8px; vertical-align: middle; }
+.gkd-cm-bar { height: 10px; background: var(--gkd-accent); border-radius: 3px; min-width: 2px; }
+.gkd-cm-footer td { font-weight: 700; background: var(--gkd-bg-page); border-top: 2px solid #dde2e8; }
+
+/* ===========================================
+   モバイル対応（レベル1: レスポンシブCSS）
+   - 768px以下: タブレット・スマホ縦
+   - 480px以下: スマホ縦のさらなる圧縮
+   =========================================== */
+@media (max-width: 768px) {
+    /* HEADER: 縦並びに */
+    .gkd-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding-bottom: 12px;
+    }
+    .gkd-header-left { justify-content: flex-start; }
+    .gkd-filters {
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+    }
+    .gkd-filter-group {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+    }
+    .gkd-filter-label { font-size: 11px; }
+    .gkd-filter-select { min-width: 0; max-width: none; width: 100%; }
+
+    /* タブバー: 横スクロール */
+    .gkd-tabnav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap;
+    }
+    .gkd-tab {
+        padding: 10px 12px;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    /* 上部サマリーカード: 5列 → 2列 */
+    .gkd-summary-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .gkd-card { padding: 12px; }
+    .gkd-card-value { font-size: 20px; }
+    .gkd-card-label { font-size: 9px; letter-spacing: 0.4px; }
+
+    /* CA別KPIバー: 折り返し */
+    .gkd-byname-kpi-bar {
+        gap: 4px;
+        padding: 12px;
+    }
+    .gkd-bkpi-card {
+        flex: 1 1 calc(33% - 4px);
+        min-width: 0;
+        padding: 6px 8px;
+    }
+    .gkd-bkpi-value { font-size: 16px; }
+    .gkd-bkpi-label { font-size: 10px; }
+    .gkd-bkpi-funnel-arrow { display: none; } /* ファネル矢印は省略 */
+
+    /* パネル: パディング縮小 */
+    .gkd-panel { padding: 14px; }
+    .gkd-panel-title { font-size: 14px; }
+    .gkd-panel-header-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    /* テーブル: 横スクロール強化 + タッチサイズ */
+    .gkd-table-wrap {
+        margin: 0 -14px; /* パネル幅いっぱいに */
+        padding: 0 14px;
+    }
+    .gkd-table { font-size: 12px; }
+    .gkd-table th, .gkd-table td { padding: 8px 6px; }
+    .gkd-native-select--sm { font-size: 13px; padding: 6px 4px; }
+    .gkd-inline-input { font-size: 13px; padding: 8px 8px; }
+
+    /* チェックボックス・ボタンの押下領域を拡大 */
+    .gkd-row-checkbox { width: 20px; height: 20px; }
+    .gkd-detail-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        min-height: 32px;
+    }
+
+    /* Tab8/Tab6 のフィルタ群 */
+    .gkd-byname-filters {
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+    }
+    .gkd-byname-filters .gkd-filter-group {
+        flex: 1 1 100%;
+    }
+    .gkd-name-search { width: 100% !important; }
+
+    /* Tab8 学生グループヘッダー */
+    .gkd-student-group-header {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    /* スマホ縦: さらに圧縮 */
+    .gkd-summary-row { grid-template-columns: 1fr; }
+    .gkd-bkpi-card { flex: 1 1 calc(50% - 4px); }
+    .gkd-filter-group { flex: 1 1 100%; }
+    .gkd-tab { padding: 8px 10px; font-size: 12px; }
+    .gkd-title { font-size: 14px; }
+    .gkd-title-sub { display: none; } /* バージョン表記等は非表示 */
+}
+/* ===== Tab2 上部サマリーバー ===== */
+.gkd-summary-bar {
+    display: flex; align-items: stretch; gap: 0;
+    background: #fff; border: 1px solid #dde2e8; border-radius: 8px;
+    margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+.gkd-sum-card {
+    flex: 1; padding: 12px 16px; border-right: 1px solid #f0f2f5;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.gkd-sum-card:last-child { border-right: none; }
+.gkd-sum-card--accent { background: #f0f7ff; }
+.gkd-sum-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; color: #687076; font-weight: 600; }
+.gkd-sum-value { font-size: 18px; font-weight: 700; color: #181818; line-height: 1.2; white-space: nowrap; }
+.gkd-sum-unit { font-size: 11px; font-weight: 400; color: #687076; margin-left: 2px; }
+.gkd-sum-sep { width: 1px; background: #dde2e8; margin: 10px 0; }
+.gkd-blue { color: #0176d3; }
+
+/* 紹介者別 KPI: 軸切替トグル */
+.gkd-axis-toggle {
+    display: flex; gap: 0;
+    border: 1px solid #dde2e8; border-radius: 6px; overflow: hidden;
+}
+.gkd-axis-btn {
+    background: #fff; border: none; padding: 6px 14px;
+    font-size: 12px; color: #687076; cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    border-right: 1px solid #dde2e8;
+}
+.gkd-axis-btn:last-child { border-right: none; }
+.gkd-axis-btn:hover { background: #f4f6f8; }
+.gkd-axis-btn--active {
+    background: #0176d3; color: #fff; font-weight: 600;
+}
+.gkd-axis-btn--active:hover { background: #0161b3; }
+
+/* ===== Tab0 CA TOP5 バーチャート版 ===== */
+.gkd-top5-wrap { display: flex; flex-direction: column; gap: 10px; }
+.gkd-top5-row {
+    display: grid;
+    grid-template-columns: 32px 110px 1fr 100px 110px;
+    align-items: center; gap: 12px;
+    padding: 6px 8px; border-radius: 6px;
+    transition: background 0.12s;
+}
+.gkd-top5-row:hover { background: #f8f9fb; }
+.gkd-top5-rank {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: #fff;
+}
+.gkd-rank-1 { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 1px 3px rgba(245,158,11,0.4); }
+.gkd-rank-2 { background: linear-gradient(135deg, #94a3b8, #64748b); box-shadow: 0 1px 3px rgba(100,116,139,0.3); }
+.gkd-rank-3 { background: linear-gradient(135deg, #ca8a04, #92400e); box-shadow: 0 1px 3px rgba(146,64,14,0.3); }
+.gkd-rank-other { background: #cbd3da; }
+.gkd-top5-name { font-weight: 600; font-size: 13px; color: #181818; }
+.gkd-top5-bar-track {
+    height: 10px; background: #eef0f3; border-radius: 5px; overflow: hidden;
+}
+.gkd-top5-bar-fill {
+    height: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+.gkd-top5-meta { font-size: 11px; color: #687076; text-align: right; }
+.gkd-top5-amount { font-weight: 700; font-size: 14px; text-align: right; }
+
+/* ローディング表示統一 (gkd-loading-wrap を gkd-loading-inline と同等に) */
+.gkd-loading-wrap {
+    display: flex; justify-content: center; align-items: center;
+    min-height: 80px; padding: 20px;
+}
+
+/* Tab0 ヨミ確度別 積み上げバー */
+.gkd-yomi-stack {
+    display: flex; height: 30px; border-radius: 6px; overflow: hidden;
+    border: 1px solid var(--gkd-border, #dde2e8);
+}
+.gkd-yomi-seg {
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    color: #fff; font-size: 11px; font-weight: 600;
+    white-space: nowrap; padding: 0 4px;
+    transition: filter 0.12s;
+}
+.gkd-yomi-seg:hover { filter: brightness(1.1); }
+.gkd-yomi-seg-label { font-weight: 700; }
+.gkd-yomi-seg-cnt { opacity: 0.9; font-weight: 500; }
+.gkd-bkpi-sub { font-size: 10px; color: var(--gkd-text-secondary, #687076); margin-top: 2px; }
+.gkd-bkpi-red { color: #dc2626; }
+/* ===== Phase 3: 業種切替トグル（紹介/送客） — 紹介の期間バーと同じシンプル構造 ===== */
+.gkd-biz-toggle {
+    display: flex;
+    gap: 8px;
+    padding: 2px 4px 8px;
+    align-items: center;
+}
+.gkd-biz-btn {
+    border: 1px solid var(--gkd-border, #e2e8f0);
+    background: #fff;
+    color: var(--gkd-text-primary, #0f172a);
+    padding: 8px 28px;
+    border-radius: 20px;
+    font-size: var(--gkd-fs-md, 14px);
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.gkd-biz-btn:hover {
+    background: var(--gkd-accent-soft, #eef2ff);
+    border-color: var(--gkd-accent, #1e40af);
+}
+.gkd-biz-btn--active {
+    background: var(--gkd-accent, #1e40af) !important;
+    color: #fff !important;
+    border-color: var(--gkd-accent, #1e40af) !important;
+    padding: 8px 28px !important;
+    border-radius: 20px !important;
+    font-size: var(--gkd-fs-md, 14px) !important;
+    font-weight: 600 !important;
+    border-width: 1px !important;
+}
+.gkd-biz-btn--active:hover {
+    background: var(--gkd-accent-hover, #1e3a8a) !important;
+    border-color: var(--gkd-accent-hover, #1e3a8a) !important;
+}
+.gkd-soukyaku-wrap { padding: 0; }
+
+/* ===== Phase 4: 送客タブ コンテンツ ===== */
+.gkd-soukyaku-tabs { padding: 0 16px 16px; }
+.gkd-sou-tab-body { padding: 16px 8px; min-height: 200px; }
+.gkd-sou-h3 { font-size: 14px; font-weight: 700; color: #334155; margin: 0 0 8px; }
+.gkd-sou-notice { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; color: #78350f; }
+.gkd-sou-notice p { margin: 0; line-height: 1.5; }
+.gkd-empty { color: #94a3b8; padding: 24px; text-align: center; font-style: italic; }
+
+/* Funnel */
+.gkd-sou-funnel { display: flex; align-items: center; gap: 0; padding: 16px 0; }
+.gkd-sou-funnel-stage {
+    flex: 1; background: #f1f5f9; padding: 16px; border-radius: 8px;
+    text-align: center; min-width: 80px;
+}
+.gkd-sou-funnel-final { background: #d1fae5; border: 1px solid #10b981; }
+.gkd-sou-funnel-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+.gkd-sou-funnel-value { font-size: 24px; font-weight: 700; color: #0f172a; }
+.gkd-sou-funnel-arrow {
+    flex: 0 0 80px; text-align: center; position: relative;
+    font-size: 24px; color: #94a3b8;
+}
+.gkd-sou-funnel-arrow::before { content: '→'; display: block; }
+.gkd-sou-funnel-rate {
+    display: block; font-size: 14px; font-weight: 600; color: #0284c7;
+    margin-top: 4px;
+}
+.gkd-sou-funnel-summary {
+    margin-top: 16px; padding: 12px; background: #f0f9ff;
+    border-radius: 6px; text-align: center; color: #075985;
+}
+.gkd-sou-funnel-summary strong { font-size: 18px; }
+
+/* Tables */
+.gkd-sou-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+}
+.gkd-sou-table th, .gkd-sou-table td {
+    padding: 8px 12px; border-bottom: 1px solid #e2e8f0; text-align: left;
+}
+.gkd-sou-table th {
+    background: #f8fafc; color: #475569; font-weight: 700;
+    border-bottom: 2px solid #cbd5e1; position: sticky; top: 0;
+}
+.gkd-sou-table .r { text-align: right; }
+.gkd-sou-table tbody tr:hover { background: #f8fafc; }

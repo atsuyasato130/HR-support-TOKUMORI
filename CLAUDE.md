@@ -47,18 +47,18 @@ python3 utils/dashboard_logger.py "🔧 修正" "依頼内容の1〜2行要約" 
 詳細構造は `~/.claude/projects/-Users-atsuyasato-Claude-AI/memory/project_directory_structure.md` を参照。
 
 **絶対原則:**
-- `private/`（`/Users/atsuyasato/Claude AI/private/`）は **ai-empire/ と完全分離**（リポジトリ外）
+- `private/`（`/Users/atsuyasato130/Claude AI/private/`）は **ai-empire/ と完全分離**（リポジトリ外）
 - `life_supporter` エージェントと ai-empire/ の接触禁止
 
-**`private/` はリポジトリ外（`/Users/atsuyasato/Claude AI/private/`）に物理分離済み。**
+**`private/` はリポジトリ外（`/Users/atsuyasato130/Claude AI/private/`）に物理分離済み。**
 
 ### ダッシュボードへの反映禁止
 以下の情報は、いかなる場合もダッシュボードに反映させてはならない:
-- `/Users/atsuyasato/Claude AI/private/` 配下での活動・作業内容
+- `/Users/atsuyasato130/Claude AI/private/` 配下での活動・作業内容
 - `life_supporter` エージェントの実行ログ・対話内容
 
 ### ログの物理的隔離
-- `private/` 配下エージェントのログは `/Users/atsuyasato/Claude AI/private/logs/` にのみ保存
+- `private/` 配下エージェントのログは `/Users/atsuyasato130/Claude AI/private/logs/` にのみ保存
 - `ai-empire/` 側の共通ログファイルへの出力を禁止
 
 ---

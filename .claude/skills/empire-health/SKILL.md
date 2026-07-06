@@ -8,7 +8,7 @@ Tokumori Business Platform のヘルスチェックを実行する。
 ## 1. empire_os.py ステータス確認
 
 ```bash
-cd '/Users/atsuyasato/Claude AI/ai-empire' && python3 core/infrastructure/empire_os.py status 2>/dev/null | head -40
+cd '/Users/atsuyasato130/Claude AI/ai-empire' && python3 core/infrastructure/empire_os.py status 2>/dev/null | head -40
 ```
 
 取得できる情報:
@@ -32,8 +32,8 @@ launchctl list | grep -E "tokumori|aiempire|hrbot"
 ## 3. 直近ログ確認
 
 ```bash
-ls -lt '/Users/atsuyasato/Claude AI/ai-empire/agents/logs/' 2>/dev/null | head -10
-ls -lt '/Users/atsuyasato/Claude AI/ai-empire/logs/patrol/' 2>/dev/null | head -5
+ls -lt '/Users/atsuyasato130/Claude AI/ai-empire/agents/logs/' 2>/dev/null | head -10
+ls -lt '/Users/atsuyasato130/Claude AI/ai-empire/logs/patrol/' 2>/dev/null | head -5
 ```
 
 ## 4. ダッシュボード稼働確認
@@ -54,7 +54,7 @@ ps aux | grep "salesforce/mcp" | grep -v grep | head -3
 ## 6. パトロール最新レポート
 
 ```bash
-cat '/Users/atsuyasato/Claude AI/ai-empire/logs/patrol/'$(ls -t '/Users/atsuyasato/Claude AI/ai-empire/logs/patrol/' 2>/dev/null | head -1) 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'  overall: {d[\"overall_status\"]}, ok={d[\"summary\"][\"ok\"]}, warn={d[\"summary\"][\"warning\"]}, err={d[\"summary\"][\"error\"]}')" 2>&1
+cat '/Users/atsuyasato130/Claude AI/ai-empire/logs/patrol/'$(ls -t '/Users/atsuyasato130/Claude AI/ai-empire/logs/patrol/' 2>/dev/null | head -1) 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'  overall: {d[\"overall_status\"]}, ok={d[\"summary\"][\"ok\"]}, warn={d[\"summary\"][\"warning\"]}, err={d[\"summary\"][\"error\"]}')" 2>&1
 ```
 
 ## 7. サマリー出力

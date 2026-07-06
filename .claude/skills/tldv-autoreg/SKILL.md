@@ -10,7 +10,7 @@ tldv会議を分類して適切なルートで自動登録する。
 
 ## 2. meeting_router 実行（情報抽出）
 ```bash
-cd "/Users/atsuyasato/Claude AI/ai-empire"
+cd "/Users/atsuyasato130/Claude AI/ai-empire"
 python3 -m agents.hr_support.meeting_router "<tldv_url>" --advisor "佐藤篤也"
 ```
 

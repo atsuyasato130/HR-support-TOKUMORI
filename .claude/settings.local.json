@@ -2,7 +2,7 @@
   "enabledMcpjsonServers": ["hr-support"],
   "permissions": {
     "allow": [
-      "Bash(python3 /Users/atsuyasato/AItest/slack/bot.py)",
+      "Bash(python3 /Users/atsuyasato130/AItest/slack/bot.py)",
       "mcp__hr-support__search_salesforce",
       "mcp__hr-support__update_salesforce_record",
       "mcp__hr-support__create_salesforce_record",

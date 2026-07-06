@@ -1,0 +1,60 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Edit(*)",
+      "Write(*)",
+      "WebFetch(*)",
+      "WebSearch(*)"
+    ],
+    "deny": [
+      "Bash(rm *)",
+      "Bash(rmdir *)",
+      "Bash(trash *)",
+      "Bash(unlink *)",
+      "Bash(shred *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 '/Users/atsuyasato/Claude AI/ai-empire/utils/sync_os.py' --quiet"
+          },
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_FILE_PATH\" == *.py ]]; then echo '{\"context\":\"Pythonファイルが変更されました。python-reviewerエージェントの実行を推奨します。\"}'; fi",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import sys,json; d=json.load(sys.stdin); cmd=d.get('command',''); bad=['rm -rf /', 'DROP TABLE', 'DELETE FROM', 'git push --force origin main']; [sys.exit(2) for b in bad if b in cmd]\" 2>/dev/null || true",
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"context\": \"ai-empire HR支援システム。利用可能MCP: hr-support(SF/Notion/Gmail/Calendar/Slack) + salesforce-dx。Iron Rule: private/との完全分離厳守。\"}'",
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

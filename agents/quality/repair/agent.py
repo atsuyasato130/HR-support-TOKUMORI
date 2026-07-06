@@ -43,7 +43,7 @@ import anthropic
 logger = logging.getLogger(__name__)
 
 REPAIR_LOG = _ROOT / "logs" / "repair"
-LAUNCH_AGENTS = Path("/Users/atsuyasato/Library/LaunchAgents")
+LAUNCH_AGENTS = Path("/Users/atsuyasato130/Library/LaunchAgents")
 
 
 # ─── データ構造 ───────────────────────────────────────────────────────────────

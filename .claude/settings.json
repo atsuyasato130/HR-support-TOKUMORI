@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 '/Users/atsuyasato/Claude AI/ai-empire/utils/sync_os.py' --quiet"
+            "command": "python3 \"$HOME/Claude AI/ai-empire/utils/sync_os.py\" --quiet"
           },
           {
             "type": "command",

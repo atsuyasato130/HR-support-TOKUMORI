@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.atsuyasato.ssa-weekly</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/atsuyasato/Claude AI/ai-empire/agents/hr_support/ssa/weekly_runner.py</string>
+  </array>
+
+  <!-- 毎週金曜日 19:00 に実行 -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>5</integer>
+    <key>Hour</key>
+    <integer>19</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/atsuyasato/Claude AI/ai-empire</string>
+
+  <key>StandardOutPath</key>
+  <string>/Users/atsuyasato/Claude AI/ai-empire/logs/ssa_weekly_stdout.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/atsuyasato/Claude AI/ai-empire/logs/ssa_weekly_stderr.log</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

@@ -2,8 +2,8 @@
 
 > **対象読者**: このプロジェクトを引き継ぐ戦略AI（軍師）または開発者
 > **作成日**: 2026-03-12 / **最終更新**: 2026-04-22
-> **リポジトリ**: `/Users/atsuyasato/Claude AI/ai-empire/`
-> **プライベート領域**: `/Users/atsuyasato/Claude AI/private/`（リポジトリ外・完全分離）
+> **リポジトリ**: `/Users/atsuyasato130/Claude AI/ai-empire/`
+> **プライベート領域**: `/Users/atsuyasato130/Claude AI/private/`（リポジトリ外・完全分離）
 > **ローカルダッシュボード**: http://localhost:8889（launchd 自動起動）
 > **統合管理スプレッドシート**: https://docs.google.com/spreadsheets/d/1g8PzcuPuUTTdO-kcSh4niuwfLw6d8zN8JQMZCrmyuH8/edit
 
@@ -19,7 +19,7 @@ HRsupport事業の業務自動化を起点に、全社AIエンパイア（Tokumo
 ```bash
 # 通常はlaunchd自動起動（PC再起動後も自動復旧）
 # 手動起動が必要な場合:
-bash "/Users/atsuyasato/Claude AI/ai-empire/start_dashboard.sh"
+bash "/Users/atsuyasato130/Claude AI/ai-empire/start_dashboard.sh"
 # または
 launchctl start com.aiempire.dashboard
 
@@ -29,7 +29,7 @@ open http://localhost:8889
 
 ### HRsupportエージェント起動
 ```bash
-cd "/Users/atsuyasato/Claude AI/ai-empire/agents/hr_support"
+cd "/Users/atsuyasato130/Claude AI/ai-empire/agents/hr_support"
 python3 main.py
 ```
 
@@ -38,7 +38,7 @@ python3 main.py
 ## 2. ディレクトリ構造（2026-04-04 確定）
 
 ```
-/Users/atsuyasato/Claude AI/
+/Users/atsuyasato130/Claude AI/
 ├── private/                      ← プライベート専用（ai-empire/と完全分離）
 │   └── life_supporter/
 └── ai-empire/                    ← 全社AIエンパイア
@@ -254,9 +254,9 @@ Notion Users(1): get_notion_users
 
 ```bash
 # 空ディレクトリの削除（Claude Codeからは実行不可）
-rmdir "/Users/atsuyasato/Claude AI/ai-empire/agents/business"
-rm -rf "/Users/atsuyasato/Claude AI/ai-empire/advisors"
-rm -rf "/Users/atsuyasato/Claude AI/ai-empire/board"
+rmdir "/Users/atsuyasato130/Claude AI/ai-empire/agents/business"
+rm -rf "/Users/atsuyasato130/Claude AI/ai-empire/advisors"
+rm -rf "/Users/atsuyasato130/Claude AI/ai-empire/board"
 ```
 
 ---

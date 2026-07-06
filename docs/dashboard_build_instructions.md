@@ -398,7 +398,7 @@ def _write_to_db(icon, summary, targets, details, status="✅ 完了"):
 `ai-empire/start_dashboard.sh`:
 ```bash
 #!/bin/bash
-cd "/Users/atsuyasato/Claude AI/ai-empire"
+cd "/Users/atsuyasato130/Claude AI/ai-empire"
 echo "Tokumori Dashboard 起動中..."
 python3 -m uvicorn dashboard.app:app --port 8889 --reload --host 0.0.0.0
 ```
