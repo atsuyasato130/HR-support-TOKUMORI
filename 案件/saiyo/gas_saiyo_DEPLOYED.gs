@@ -25,12 +25,16 @@ var C = {
 // 表ヘッダーの共通トーン(白基調プレミアム・全タブ統一)。淡グレー地＋濃文字＋下罫。
 var HEAD_BG = '#ECE9E4', HEAD_RULE = '#C9C4BC', BOX_LT = '#E4E0D8';
 
+// 🔒 応募者向けメールのマスタースイッチ。false の間は mailSend_ が物理ブロック(ログのみ・1通も送信されない)。
+// 導入初期の誤送信ゼロ保証。解除=このコード定数を true にして再デプロイ(シートセルにしないのは誰でも触れて保証にならないため)。
+var MAIL_MASTER_ENABLED = false;
+
 var SH = {
   README: '00_README', CONF: '01_設定',
   FLOW: '02_選考設計・社内体制', GOAL: '03_採用目標・月別ファネル', ENTRY: '04_エントリー目標管理',
   MASTER: '10_候補者マスタ', IV: '11_面接スケジュール',
   D_ALL: '20_統合ダッシュボード', D_MID: '21_中途', D_NEW: '22_新卒', D_BIZ: '23_業務委託', D_INT: '24_インターン',
-  AN_CH: '30_チャネル分析', AN_JOB: '31_職種分析', NA: '40_ネクストアクション', CV: '50_履歴書管理', RP: '60_レポート出力',
+  AN_CH: '30_チャネル分析', AN_JOB: '31_職種分析', NA: '40_選考コックピット', CV: '50_履歴書管理', RP: '60_レポート出力',
   NOTE: '12_面接評価ノート', CSV: '09_CSV取込', MAIL: '07_メール設定', BRIEFWORK: '08_説明会テキストワーク',
   SURVEYCFG: '13_段階別アンケート設定', SURVEYLOG: '14_アンケート回答'
 };
@@ -40,7 +44,7 @@ var ENTRY_CATEGORIES = ['エージェント', 'ダイレクトリクルーティ
 var MASTER_COLS = [
   'candidate_id', '区分', '職種', 'チャネル',
   '氏名', '性別', '生年月日', '連絡先', '電話番号', '大学', '学部', '学科', '高校名',
-  '応募日', '現ステージ', 'ステータス',
+  '応募日', '現ステージ', '現ステージ開始日', 'ステータス',
   '見送り辞退理由', '競合先', '採用担当RC', 'ネクストアクション', 'NA期限',
   '次回面接日時', '次回面接URL', '次回面接官', '内定日', '承諾日', '入社日',
   '履歴書リンク', '履歴書回収日', '職務経歴書リンク', '職務経歴書回収日', 'サンクス送信日', '評価メモ',
@@ -115,6 +119,17 @@ var MANAGE_VIEW_COLS = ['現ステージ', 'ステータス', '採用担当RC', 
   '内定日', '承諾日', '入社日', '見送り辞退理由'];
 // 日付として往復させる作業ビュー列(同期時 parseDateLoose_)
 var MANAGE_DATE_COLS = { 'NA期限': 1, '内定日': 1, '承諾日': 1, '入社日': 1 };
+
+// 40_選考コックピット: 1行=アクティブ(進行中/内定)候補者。1タブで NA・調整期限・面接確定・通知まで完結する運用ハブ。
+// 自動列(グレー)=cockpitData_が算出 / SYNC列(ピンク)=編集をonEditでマスタへ書き戻し / OWN列(ピンク)=コックピット保持(IDキー退避)。
+var COCKPIT_AUTO_COLS = ['候補者ID', '氏名', '区分', '滞在日数', '停滞', '調整期限', '期限状態', '次回面接日時', '評価未入力', '優先度'];
+var COCKPIT_SYNC_COLS = ['現ステージ', 'ステータス', 'ネクストアクション', 'NA期限', '採用担当RC'];  // マスタへ書き戻し(正本=マスタ)
+var COCKPIT_DATE_COLS = { 'NA期限': 1 };  // 同期時 parseDateLoose_ で日付往復
+var COCKPIT_OWN_COLS  = ['確定ステージ', '確定日時', '面接官', '形式', 'URL・場所', '通知送信', '通知状態', '通知日時'];  // 面接調整の操作列
+// 表示列順(ヘッダー行2)。識別→状態→アラート→NA→面接調整の操作。
+var COCKPIT_COLS = ['候補者ID', '氏名', '区分', '現ステージ', 'ステータス', '滞在日数', '停滞', '調整期限', '期限状態',
+  '次回面接日時', '評価未入力', '優先度', 'ネクストアクション', 'NA期限', '採用担当RC',
+  '確定ステージ', '確定日時', '面接官', '形式', 'URL・場所', '通知送信', '通知状態', '通知日時'];
 // 区分固有の標準取得項目(②保持・コード定数。P6で設定駆動化)
 var SEG_FIELDS = {
   '中途': ['現年収', '希望年収', '現職企業', '現職役職', '転職理由', '経験年数', '稼働開始可能時期'],
@@ -166,7 +181,10 @@ var PANELS = [
   { key: 'score', label: '⑬総合評価分布' },
   { key: 'gender', label: '⑭性別別' },
   { key: 'age', label: '⑮年齢別' },
-  { key: 'yomi', label: '⑯ヨミ計測' }
+  { key: 'yomi', label: '⑯ヨミ計測' },
+  { key: 'activedist', label: '⑰アクティブ現在地分布' },
+  { key: 'chcat', label: '⑱経路カテゴリ別ファネル' },
+  { key: 'surveyx', label: '⑲アンケート×到達相関' }
 ];
 
 // レポート項目定義(Phase10): key=内部キー, rep=対象レポート(月次/週次), label=設定表示名。
@@ -214,6 +232,11 @@ var CONF_LAYOUT = {
   // JOB は v9 で col15(O)→col8(H) へ移動(チャネル定義撤去後の隙間を詰める)。選考ステージ(A-F)の直後に配置。
   JOB:    { col: 8, w: 4, titleRow: 14, row: 16, max: 50, type: 'table',
             title: '■ 職種定義', header: ['職種名', '区分', '目標採用数', '備考'] },
+  // 調整期限・停滞SLA(band2 レーンC O:R=チャネル定義撤去後の空き)。ステージごとの運用SLA。
+  // 調整期限(日)=ステージ入りからN日以内に次回面接を確定(超過を40_コックピット/Slackで警告)。停滞閾値(日)=滞在N日超で停滞アラート。空欄=不使用。
+  SLA:    { col: 15, w: 4, titleRow: 14, row: 16, max: 50, type: 'table',
+            title: '■ 調整期限・停滞アラート（ステージ別SLA）',
+            header: ['区分', 'ステージ名', '調整期限(日)', '停滞閾値(日)'] },
   // ❸ 目標・メンバー (band3: group行68 / title行69 / header行70 / data行71-)  ※band2拡張で+12
   TARGET: { col: 1,  w: 5, titleRow: 69, row: 71, max: 24, type: 'table',
             title: '■ 区分別 採用目標', header: ['区分', '内定目標', '承諾目標', '入社目標', '対象期間'],
@@ -223,7 +246,7 @@ var CONF_LAYOUT = {
   // ❹ 評価・表示・連携 (band4: group行97 / title行98 / header行99 / data行100-)
   EVAL:   { col: 1,  w: 4, titleRow: 98, row: 100, max: 30, type: 'eval',
             title: '■ 評価項目（比重・最低点）', header: ['評価項目', '比重', '最低点', '有効'] },
-  PANEL:  { col: 8,  w: 4, titleRow: 98, row: 100, max: 16, type: 'panel',  // max=PANELS.length(固定)
+  PANEL:  { col: 8,  w: 4, titleRow: 98, row: 100, max: 19, type: 'panel',  // max=PANELS.length(固定)
             title: '■ 表示パネル（ダッシュ表示＋レポート出力）', header: ['パネル', '有効', '表示順', 'レポート出力'] },
   CSV:    { col: 15, w: 2, titleRow: 98, row: 100, max: 30, type: 'csv',
             title: '■ CSV列マッピング(ATS→マスタ)', header: ['CSVの列名', 'マスタ項目'] },
@@ -252,7 +275,7 @@ var CONF_LAYOUT = {
   SURVEY: { col: 1, w: 4, titleRow: 222, row: 224, max: 20, type: 'survey',
             title: '■ 参加後アンケート項目（チェックでフォームに出す）',
             header: ['アンケート項目', 'タイプ', '必須', '有効'],
-            briefWorkCell: [219, 2], surveyOnCell: [220, 2] },
+            briefWorkCell: [219, 2], surveyOnCell: [220, 2], autoPromoteCell: [221, 2] },
   // ❿ 区分別 取得項目 (band10: group行247 / title248 / header249 / data250-)  ②進捗管理の区分固有項目を設定駆動化
   SEGFIELDS: { col: 1, w: 3, titleRow: 248, row: 250, max: 40, type: 'segfields', solo: true,
             hint: '②進捗管理タブに出す、区分固有の取得項目を定義（有効✓）',
@@ -277,7 +300,7 @@ var SURVEY_SATISFACTION = ['大変満足', '満足', '普通', 'やや不満', '
 // 志望度スケール(タイプ「志望度」に注入)。%アンカー方式(元シートの当社との相性に準拠・文言は各社で編集可)
 var SURVEY_ASPIRATION = ['120% 内定が出たら即承諾したい', '100% 第一志望群・優先して進みたい', '75% 方向性は合致・前向き', '50% 興味あり・これから理解を深めたい', '25% 様子見・志望度は低め'];
 // 段階別アンケート設定タブの列＋既定(元シート 説明会テキストワーク／一次面接アンケート に準拠)。[対象段階,項目名,タイプ,必須,有効]。タイプ=5段階/満足度/志望度/短文/長文/選択
-var SURVEYCFG_COLS = ['フォーム名', '項目名', 'タイプ', '必須', '有効', '選択肢(選択型・改行/カンマ区切り)'];
+var SURVEYCFG_COLS = ['フォーム名', '項目名', 'タイプ', '必須', '有効', '選択肢(選択型・改行/カンマ区切り)', '分析対象'];
 var SURVEY_TYPES = ['5段階', '満足度', '志望度', '短文', '長文', '選択', '順位', 'グリッド'];
 // グリッド型(行=選択肢/列=評価)で列を省略したときの既定列(重要度5段階)
 var SURVEY_GRID_COLS = ['とても重要', '重要', '普通', 'あまり重要でない', '重要でない'];
@@ -294,7 +317,7 @@ var SURVEY_STAGE_DEFAULT = [
   ['一次面接', '気になっている点・もっと知りたいこと', '長文', false, true],
   ['一次面接', '就職活動の悩み', '長文', false, true],
   ['一次面接', '現在の志望度が高い企業(3つ)', '短文', false, true],
-  // 順位/グリッド型の見本(DOTZの価値観ランキング相当)。選択肢列=順位は項目を改行/カンマ区切り、グリッドは「行 ｜ 列」。
+  // 順位/グリッド型の見本(価値観ランキング等)。選択肢列=順位は項目を改行/カンマ区切り、グリッドは「行 ｜ 列」。
   ['内定者アンケート', '大切にしたい価値観の順位（上位ほど重視）', '順位', false, true, '成長機会,裁量・自由度,給与・待遇,安定性,人間関係,理念への共感'],
   ['内定者アンケート', '当社の各魅力の重要度', 'グリッド', false, true, '事業の将来性,一緒に働く人,成長環境,待遇 ｜ とても重要,重要,普通,あまり重要でない'],
 ];
@@ -332,7 +355,7 @@ var OLD_LAYOUT = {
   EVAL: { row: 3, col: 36, w: 4 }, CSV: { row: 3, col: 41, w: 2 }, PANEL: { row: 3, col: 45, w: 3 },
   companyCell: [8, 31], methodCell: [10, 31]
 };
-var CONF_LAYOUT_VER = 'v10-docstoggle';
+var CONF_LAYOUT_VER = 'v11-cockpit-eval';
 var CONF_DATA_ROW = 3;   // 後方互換(旧コードの一部が参照)。新リーダーは CONF_LAYOUT.<key>.row を使う。
 var CONF_MAX_ROW  = 60;  // 後方互換
 
@@ -344,7 +367,12 @@ var README_VER = 'v-manual-4';
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('採用')
     .addItem('ダッシュボードを更新', 'refreshAll')
-    .addItem('ダッシュボード自動更新を設定（毎朝9時）', 'setRefreshTrigger')
+    .addItem('ダッシュボード自動更新を設定（6時間ごと）', 'setRefreshTrigger')
+    .addSeparator()
+    .addItem('選考コックピットを更新（40_）', 'refreshCockpit')
+    .addItem('面接を確定＆通知（コックピット）', 'cockpitConfirmNow')
+    .addItem('面接確定ドライラン（送信・反映なし）', 'cockpitConfirmDry')
+    .addSeparator()
     .addItem('面接評価を保存（12_ノート）', 'saveEvaluation')
     .addItem('レポートを生成', 'generateReports')
     .addItem('月次レポートをDoc出力', 'generateMonthlyDoc')
@@ -355,6 +383,7 @@ function onOpen() {
     .addItem('応募フォームを作成/更新（区分別）', 'createEntryForms')
     .addItem('参加後アンケートを作成/更新', 'createSurveyForm')
     .addItem('アンケート/フォームを作成・更新（任意名）', 'createStageSurveyForms')
+    .addItem('面接評価フォームを作成/更新（面接官用）', 'createEvalForm')
     .addItem('媒体別 進捗シートを作成/更新（社内限定）', 'createAgentSheet')
     .addSeparator()
     .addSubMenu(SpreadsheetApp.getUi().createMenu('レポート配信')
@@ -390,9 +419,11 @@ function onOpen() {
 function refreshAll() {
   syncNextInterview();
   syncInterviewSummary_();
+  try { backfillStageStart_(); } catch (e) { Logger.log('refreshAll backfillStageStart_ error: ' + e); }  // 現ステージ開始日の推定補完
   renderAllDashboards_();
   try { buildEntryTargets_(); } catch (e) { Logger.log('refreshAll buildEntryTargets_ error: ' + e); }  // 04 チャネル再同期＋実績再集計
   try { refreshChannelDropdown_(); } catch (e) { Logger.log('refreshAll refreshChannelDropdown_ error: ' + e); }
+  try { syncEvalFormChoices_(); } catch (e) { Logger.log('refreshAll syncEvalFormChoices_ error: ' + e); }  // 評価フォームの候補者選択肢を最新化
   try { applySegmentGrayout_(); } catch (e) { Logger.log('refreshAll applySegmentGrayout_ error: ' + e); }
   try { reorderTabs_(); } catch (e) { Logger.log('refreshAll reorderTabs_ error: ' + e); }
   toast_('全ダッシュボードを更新しました');
@@ -423,7 +454,7 @@ function applySegmentGrayout_() {
     }
     sh.getRange(b.row, b.col, b.max, b.w).setBackgrounds(bgs);
   }
-  gray('STAGE', 0); gray('JOB', 1); gray('TARGET', 0); gray('DOCS', 0); gray('SEGFIELDS', 0);
+  gray('STAGE', 0); gray('JOB', 1); gray('TARGET', 0); gray('DOCS', 0); gray('SEGFIELDS', 0); gray('SLA', 0);
   // 必要書類: 有効区分でも「書類回収」OFFの区分行はグレー(その区分は書類を集めない)
   try {
     var bd = L.DOCS, dsegs = sh.getRange(bd.row, bd.col, bd.max, 1).getValues();
@@ -458,11 +489,12 @@ function applySingleSegmentMode_(sh, en) {
   var lo = L.STAGE.row, hi = L.SEGFIELDS.row + L.SEGFIELDS.max;
   try { sh.showRows(lo, hi - lo); } catch (e) {}  // 一旦全表示(可逆・stale hidden回避)
   if (!single) return;
-  // STAGE(colA区分) ↔ JOB(col I区分) 同居: 両方が off かつ どちらかが実無効 のときだけ隠す
+  // STAGE(colA区分) ↔ JOB(col I区分) ↔ SLA(col O区分) 同居: 全て off かつ いずれかが実無効 のときだけ隠す
   var n1 = L.STAGE.max;
   var stg = sh.getRange(L.STAGE.row, L.STAGE.col, n1, 1).getValues();
   var job = sh.getRange(L.JOB.row, L.JOB.col + 1, n1, 1).getValues();
-  hideRunsIf_(sh, L.STAGE.row, n1, function (i) { return off(stg[i][0]) && off(job[i][0]) && (dis(stg[i][0]) || dis(job[i][0])); });
+  var slaC = sh.getRange(L.SLA.row, L.SLA.col, n1, 1).getValues();
+  hideRunsIf_(sh, L.STAGE.row, n1, function (i) { return off(stg[i][0]) && off(job[i][0]) && off(slaC[i][0]) && (dis(stg[i][0]) || dis(job[i][0]) || dis(slaC[i][0])); });
   // TARGET(colA区分) ↔ MEMBER(col H 氏名・非区分) 同居: TARGET無効 かつ メンバー空 のときだけ
   var n2 = L.TARGET.max;
   var tgt = sh.getRange(L.TARGET.row, L.TARGET.col, n2, 1).getValues();
@@ -484,7 +516,7 @@ function renderAllDashboards_() {
   docsCacheClear_();  // SEG(書類回収)キャッシュをこの実行用に初期化(直前のsetupAllでSEG書換→最新を読む)
   var en = enabledSegments_();
   SEGMENTS.forEach(function (s) {
-    var tab = SEG_TAB[s]; var sh = ss_().getSheetByName(tab); if (!sh) return;
+    var tab = SEG_TAB[s]; var sh = sheet_(tab);
     if (en.indexOf(s) >= 0) {
       try { sh.showSheet(); } catch (e) {}
       renderSegmentDash_(tab, s);
@@ -515,6 +547,8 @@ function renderAllDashboards_() {
     } else if (enabled) { try { buildSegManage_(s); var es = ss_().getSheetByName(manageName_(s)); if (es) es.showSheet(); } catch (e) { Logger.log('renderAllDashboards ' + s + '② error: ' + e); } }
     else { var msh = ss_().getSheetByName(manageName_(s)); if (msh) { try { msh.hideSheet(); } catch (e) {} } }
   });
+  try { buildCockpit_(); } catch (e) { Logger.log('renderAllDashboards buildCockpit_ error: ' + e); }  // 40_選考コックピット
+  try { applyCsvVisibility_(); } catch (e) { Logger.log('renderAllDashboards applyCsvVisibility_ error: ' + e); }  // 09_をエントリー方式で出し分け
   try { buildChannelMaster_(); } catch (e) {}  // チャネル候補マスタ(研究リスト・区分レーン・チェック式)
   // 旧タブ撤去: 30/31分析(→20統合)・08説明会テキストワーク(→新卒②へ統合)・旧読取専用名簿(_名簿)
   [SH.AN_CH, SH.AN_JOB, SH.BRIEFWORK, 'チャネル候補マスタ'].forEach(function (nm) {
@@ -573,9 +607,9 @@ function setupAll() {
   buildGoalDesign_();   // 03 採用目標・月別ファネル
   buildEntryTargets_(); // 04 エントリー目標管理(構造生成＋実績自動)
   PropertiesService.getDocumentProperties().setProperty('designVer', DESIGN_VER);  // 設計タブ版を確定
-  reservePlaceholders_();
   syncNextInterview();
   syncInterviewSummary_();
+  try { backfillStageStart_(); } catch (e) { Logger.log('setupAll backfillStageStart_ error: ' + e); }
   renderAllDashboards_();
   renderReports_();
   try { reorderTabs_(); } catch (e) {}  // タブを論理順に整列
@@ -679,7 +713,7 @@ function docsEnabledForSeg_(seg) {
   } catch (e) { return true; }
 }
 // SEG/STAGEを書き換えた直後(setupAll/onEditの設定変更)に実行内キャッシュを捨てる。
-function docsCacheClear_() { _docsSegCache = null; _segStagesCache = null; }
+function docsCacheClear_() { _docsSegCache = null; _segStagesCache = null; _slaCache = null; }
 // いずれかの有効区分が書類回収ONか(50タブ生成/非表示の判定)。
 function docsActive_() {
   try { return enabledSegments_().some(function (s) { return docsEnabledForSeg_(s); }); } catch (e) { return true; }
@@ -933,7 +967,17 @@ function slackWeeklyText_(asOf) {
   var iv = sheet_(SH.IV), ivd = iv.getDataRange().getValues(), ivH = headerIndex_(ivd.shift()), up = 0;
   ivd.forEach(function (r) { var dt = r[ivH['予定日時']]; if (String(r[ivH['ステータス']]) === 'キャンセル') return; if (inDays(dt, 1, 7)) up++; });
   var frag = {
-    w_move: function () { return ['今週: 応募' + app + ' / 内定' + off + ' / 承諾' + acc + ' / 入社' + joi]; },
+    w_move: function () {
+      var out = ['今週: 応募' + app + ' / 内定' + off + ' / 承諾' + acc + ' / 入社' + joi];
+      try {
+        var sd = weeklySnapDiff_(n);
+        if (sd.hasBase) {
+          out.push('_今週のファネル増加（前週比・応募/書類/面接/内定/確定）_');
+          sd.rows.forEach(function (r) { out.push('• ' + r[0] + ' ' + r[1] + ' / ' + r[2] + ' / ' + r[3] + ' / ' + r[4] + ' / ' + r[5]); });
+        }
+      } catch (e) {}
+      return out;
+    },
     w_upcoming: function () { return ['来週の面接予定: ' + up + '件']; },
     w_todo: function () { return ['要対応(NA期限超過): ' + todo + '件']; },
     w_funnel: function () {
@@ -963,6 +1007,19 @@ function slackDailyText_(asOf) {
   var lines = ['*' + companyName_() + ' 本日(' + fmtD_(n) + ')*', '面接 ' + today.length + '件'];
   if (today.length) lines = lines.concat(today.slice(0, 20));
   lines.push('要対応(NA期限超過) ' + todo.length + '件'); if (todo.length) lines = lines.concat(todo.slice(0, 20));
+  // 選考コックピットのアラート3種(調整期限超過/停滞/評価未入力)を追記
+  try {
+    var cp = cockpitData_();
+    var over = cp.list.filter(function (x) { return x.dueDays != null && x.dueDays < 0; });
+    var stall = cp.list.filter(function (x) { return x.stalled; });
+    var evalM = cp.list.filter(function (x) { return x.evalMiss; });
+    lines.push('調整期限超過 ' + over.length + '件');
+    over.slice(0, 20).forEach(function (x) { lines.push('  - ' + x.name + '（' + x.curStage + '・期限' + fmtD_(x.due) + '・超過' + (-x.dueDays) + '日' + (x.rc ? '・' + x.rc : '') + '）'); });
+    lines.push('停滞アラート ' + stall.length + '件');
+    stall.slice(0, 20).forEach(function (x) { lines.push('  - ' + x.name + '（' + x.curStage + ' 滞在' + x.stay + '日）'); });
+    lines.push('評価未入力 ' + evalM.length + '件');
+    evalM.slice(0, 20).forEach(function (x) { lines.push('  - ' + x.name + '（' + x.evalMiss.stage + (x.evalMiss.who ? '・' + x.evalMiss.who : '') + (x.evalMiss.dt instanceof Date ? '・実施' + fmtD_(x.evalMiss.dt) : '') + '）'); });
+  } catch (e) { Logger.log('slackDailyText_ cockpit section error: ' + e); }
   return lines.join('\n');
 }
 
@@ -995,8 +1052,8 @@ function removeSlackTriggers() {
 // ダッシュボード自動更新トリガー(毎朝9時)を単独で設定。グラフ画像の鮮度維持用。
 function setRefreshTrigger() {
   ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'refreshAll') ScriptApp.deleteTrigger(t); });
-  ScriptApp.newTrigger('refreshAll').timeBased().everyDays(1).atHour(9).create();
-  toast_('ダッシュボード自動更新を設定しました（毎朝9時に再生成＝グラフ画像も最新化）');
+  ScriptApp.newTrigger('refreshAll').timeBased().everyHours(6).create();
+  toast_('ダッシュボード自動更新を設定しました（6時間ごとに再生成＝グラフ画像も最新化）');
 }
 function slackWeeklyAuto() { var t = slackTargetByPrefix_('週次'); if (t && t.enabled) sendSlack_(t.channel, slackWeeklyText_(nowTokyo_())); }
 function slackMonthlyAuto() { var t = slackTargetByPrefix_('月次'); if (t && t.enabled) sendSlack_(t.channel, slackMonthlyText_(nowTokyo_())); }
@@ -1113,7 +1170,7 @@ function tokyoYM_(date) { var t = new Date(date.getTime() + 9 * 3600 * 1000); re
 function fmtD_(date) { return Utilities.formatDate(date, 'Asia/Tokyo', 'MM/dd'); }
 function fmtDT_(date) { return Utilities.formatDate(date, 'Asia/Tokyo', 'MM/dd HH:mm'); }
 
-/* ---------- 書式ヘルパー (DOTZ writeDynTable_ をブランド色に再スキン) ---------- */
+/* ---------- 書式ヘルパー (動的テーブル描画をブランド色でスキン) ---------- */
 
 // 赤帯タイトル(ブランドの顔)
 // メインタイトル(プレミアムLight・細い赤罫): 白地＋黒太字＋下端の赤罫(アクセント)。赤ベタ塗りは廃止。
@@ -1185,7 +1242,7 @@ function kpiHero_(sh, labelRow, items, startCol, width, opts) {
 }
 
 /* ---------- グラフ(QuickChart画像・黒×朱・データラベル) ---------- */
-// FUSION月間Docと同品質: 横/縦棒＝データラベル・クリーン、ドーナツ＝ブランド配色＋ラベル。
+// 月間レポートDocと同品質: 横/縦棒＝データラベル・クリーン、ドーナツ＝ブランド配色＋ラベル。
 // シート埋め込み純正チャート→QuickChart画像へ置換。範囲(1行目=ヘッダ/系列名)はそのまま流用。
 var SQC_INK = '#1A1A1A', SQC_MUTED = '#8A8A8A', SQC_GRID = '#EEEEEE';
 var SQC_SERIES = ['#AF322C', '#1A1A1A', '#8A8A8A', '#C77B74'];                 // 系列色(朱/黒/グレー/薄朱)
@@ -1523,9 +1580,10 @@ function buildSettings_() {
   if (!stored) { try { if (String(sh.getRange(14, 1).getValue() || '').indexOf('選考ステージ') >= 0) stored = CONF_LAYOUT_VER; } catch (e) {} }
   var preV6 = (stored === 'v2-bands' || stored === 'v3-report' || stored === 'v4-docs' || stored === 'v4-docs-form' || stored === 'v5-survey');
   // band❶〜❾位置が共通のバンド版(v6/v8/v9)はCONF_LAYOUT位置で読む(=isNew)。※新VER追加時は必ずここに足す(漏れると全設定喪失)。
-  var isNew = (preV6 || stored === 'v6-rows' || stored === 'v8-segfields' || stored === 'v9-jobmove' || stored === CONF_LAYOUT_VER);
+  var isNew = (preV6 || stored === 'v6-rows' || stored === 'v8-segfields' || stored === 'v9-jobmove' || stored === 'v10-docstoggle' || stored === CONF_LAYOUT_VER);
   // 職種定義(JOB)はv9でcol15→col8へ移動(チャネル定義撤去後の隙間詰め)。pre-v9(preV6/v6/v8)はcol15で退避・v9以降はcol8。
-  var jobOld = isNew && stored !== 'v9-jobmove' && stored !== CONF_LAYOUT_VER;
+  // JOBはv9でcol15→col8へ移動済み → v9以降の全バージョンを除外(⚠️新VER追加時はここにも足す。漏れるとJOBがseedで上書き喪失)。
+  var jobOld = isNew && stored !== 'v9-jobmove' && stored !== 'v10-docstoggle' && stored !== CONF_LAYOUT_VER;
   var backup = props.getProperty('confBackup');
   var snap = backup ? JSON.parse(backup) : snapshotSettings_(sh, isNew, preV6, jobOld);
   if (!backup) props.setProperty('confBackup', JSON.stringify(snap));
@@ -1581,8 +1639,10 @@ function snapshotSettings_(sh, isNew, preV6, jobOld) {
     SEG: rd('SEG'), EVAL: rd('EVAL'), CSV: rd('CSV'), PANEL: rd('PANEL'), SLACK: rd('SLACK'),
     REPORT: rd('REPORT'), DOCS: rd('DOCS'), FORMFIELDS: rd('FORMFIELDS'), BRIEF: rd('BRIEF'), SURVEY: rd('SURVEY'),
     SEGFIELDS: rd('SEGFIELDS'),
+    SLA: (isNew && !preV6 && !jobOld) ? rd('SLA') : [],  // v11新設。jobOld(v6/v8)ではSLA位置=旧JOB位置のため空読み(JOB値の混入防止)
     briefWork: cellVal(PRE_V6.briefWorkCell, CONF_LAYOUT.SURVEY.briefWorkCell),
     surveyOn: cellVal(PRE_V6.surveyOnCell, CONF_LAYOUT.SURVEY.surveyOnCell),
+    autoPromote: cellVal(null, CONF_LAYOUT.SURVEY.autoPromoteCell),
     primaryGoal: String(cellVal(PRE_V6.primaryCell, CONF_LAYOUT.TARGET.primaryCell) || '').trim(),
     company: company, method: method,
     asOf: cellVal(PRE_V6.asOfCell, CONF_LAYOUT.SLACK.asOfCell)
@@ -1674,6 +1734,11 @@ function applyConfFormats_(sh, segRule) {
   var stageRule = SpreadsheetApp.newDataValidation().requireValueInRange(confSrc_(sh, 'STAGE', 2), true).setAllowInvalid(true).build();
   confSrc_(sh, 'DOCS', 3).setDataValidation(stageRule);                                // 回収ステージ=ステージ名範囲参照(即時)
   confSrc_(sh, 'DOCS', 4).insertCheckboxes();                                          // 有効
+  // 調整期限・停滞SLA
+  confSrc_(sh, 'SLA', 0).setDataValidation(segRule);                                   // 区分
+  confSrc_(sh, 'SLA', 1).setDataValidation(stageRule);                                 // ステージ名=範囲参照
+  sh.getRange(L.SLA.row, L.SLA.col + 2, L.SLA.max, 2).setNumberFormat('0');            // 調整期限/停滞閾値=日数
+  sh.getRange(L.SURVEY.autoPromoteCell[0], L.SURVEY.autoPromoteCell[1]).insertCheckboxes(); // アンケート回答で自動昇格
   // 応募フォーム項目
   confSrc_(sh, 'FORMFIELDS', 0).setNumberFormat('@');                                  // 項目名
   vCellListRange_(sh, L.FORMFIELDS.row, L.FORMFIELDS.col + 1, L.FORMFIELDS.max, FORMFIELD_TYPES);      // タイプ
@@ -1772,6 +1837,24 @@ function populateSettings_(sh, snap) {
     });
   });
   put('DOCS', dc);
+  // 調整期限・停滞SLA: 退避 + STAGE定義に在ってSLAに無い行を既定値で追記(キー=区分|ステージ名)。
+  // 既定: interview/task/offer段=調整7日・停滞14日 / entry/screen=調整なし・停滞14日 / accept/join=なし。空欄=不使用。
+  var sla = (snap.SLA && snap.SLA.length) ? snap.SLA.slice() : [];
+  var haveSla = {}; sla.forEach(function (r) { haveSla[String(r[0]).trim() + '|' + String(r[1]).trim()] = true; });
+  ((snap.STAGE && snap.STAGE.length) ? snap.STAGE : seed.STAGE).forEach(function (r) {
+    var sg = String(r[0]).trim(), nm = String(r[2]).trim(), ty = String(r[3]).trim();
+    if (!sg || !nm || haveSla[sg + '|' + nm]) return;
+    haveSla[sg + '|' + nm] = true;
+    var adj = (['interview', 'task', 'offer'].indexOf(ty) >= 0) ? 7 : '';
+    var stall = (ty === 'accept' || ty === 'join') ? '' : 14;
+    sla.push([sg, nm, adj, stall]);
+  });
+  put('SLA', sla);
+  sh.getRange(L.SLA.titleRow, L.SLA.col).setNote('ステージごとの運用SLA。\n調整期限(日)=ステージに入ってからN日以内に次回面接を確定（超過は40_選考コックピット/Slack日次で警告）。\n停滞閾値(日)=滞在がN日を超えたら停滞アラート。\n空欄=その機能を使わない。');
+  // アンケート回答で自動昇格(トグル・SURVEYの briefWork/surveyOn の下)
+  sh.getRange(L.SURVEY.autoPromoteCell[0], 1).setValue('アンケート回答で自動昇格').setFontWeight('bold').setFontColor(C.BLACK)
+    .setNote('ONにすると、アンケート回答（参加後アンケート/フォーム名=ステージ名の段階別アンケート）を受信したとき、候補者の現ステージを該当ステージへ自動で進めます（逆行なし・見送り/辞退/内定以降は対象外）。');
+  sh.getRange(L.SURVEY.autoPromoteCell[0], L.SURVEY.autoPromoteCell[1]).setValue(snap.autoPromote === '' || snap.autoPromote == null ? false : !!snap.autoPromote);
   // 応募フォーム項目: 退避優先・無ければ既定(同名項目で不足分追記)
   var ff = (snap.FORMFIELDS && snap.FORMFIELDS.length) ? snap.FORMFIELDS.slice() : [];
   var haveF = {}; ff.forEach(function (r) { haveF[String(r[0])] = true; });
@@ -1923,7 +2006,7 @@ function buildMaster_() {
   // 列幅(MASTER_COLS順に対応)
   var WIDTHS = { 'candidate_id': 110, '区分': 70, '職種': 110, 'チャネル': 100, '氏名': 90, '性別': 64,
     '生年月日': 100, '連絡先': 150, '電話番号': 120, '大学': 110, '学部': 110, '学科': 110, '高校名': 120,
-    '応募日': 90, '現ステージ': 90, 'ステータス': 70, '見送り辞退理由': 110, '競合先': 110, '採用担当RC': 90,
+    '応募日': 90, '現ステージ': 90, '現ステージ開始日': 100, 'ステータス': 70, '見送り辞退理由': 110, '競合先': 110, '採用担当RC': 90,
     'ネクストアクション': 200, 'NA期限': 90, '次回面接日時': 130, '次回面接URL': 110, '次回面接官': 110,
     '内定日': 90, '承諾日': 90, '入社日': 90, '履歴書リンク': 150, '履歴書回収日': 100,
     '職務経歴書リンク': 150, '職務経歴書回収日': 110, 'サンクス送信日': 100, '評価メモ': 200,
@@ -1941,7 +2024,7 @@ function buildMaster_() {
   }
 
   // 日付書式
-  ['生年月日', '応募日', 'NA期限', '内定日', '承諾日', '入社日', '直近面接日',
+  ['生年月日', '応募日', '現ステージ開始日', 'NA期限', '内定日', '承諾日', '入社日', '直近面接日',
    '履歴書回収日', '職務経歴書回収日', 'サンクス送信日'].forEach(function (k) {
     sh.getRange(2, H[k] + 1, N, 1).setNumberFormat('yyyy-mm-dd');
   });
@@ -2252,8 +2335,133 @@ function renderPanel_(sh, row, key, M, seg) {
     case 'gender': { var tg = buildByKey_(M.rows, M.H, M.stageNames, M.idxOf, '性別'); return section_(sh, row, '⑭ 性別別 ファネル＆全ステージ通過率', tg, tg.redCols); }
     case 'age': { var ta = buildByAge_(M.rows, M.H, M.stageNames, M.idxOf); return section_(sh, row, '⑮ 年齢別 ファネル＆全ステージ通過率', ta, ta.redCols); }
     case 'yomi': return buildYomiMetricsPanel_(sh, row, M, seg);
+    case 'activedist': { var tad = buildActiveDist_(M); return section_(sh, row, '⑰ アクティブ現在地分布（進行中の現在ステージ・非累積）', tad, [2]); }
+    case 'chcat': { var tcc = buildByChannelCat_(M); return section_(sh, row, '⑱ 経路カテゴリ別 ファネル＆平均到達日数', tcc, [5]); }
+    case 'surveyx': { var tsx = buildSurveyReach_(M); return section_(sh, row, '⑲ アンケート項目×到達相関（13_「分析対象」✓の項目）', tsx, [5]); }
   }
   return row;
+}
+
+// ⑰ アクティブ現在地分布: 進行中の候補者が「今どの段に居るか」(累積でなく現在地)。滞留の可視化。
+function buildActiveDist_(M) {
+  var H = M.H, cnt = {}, total = 0;
+  M.rows.forEach(function (r) {
+    if (String(r[H['ステータス']] || '') !== '進行中') return;
+    var s = String(r[H['現ステージ']] || '').trim() || '(未設定)';
+    cnt[s] = (cnt[s] || 0) + 1; total++;
+  });
+  var order = M.stageNames.slice(); if (cnt['(未設定)']) order.push('(未設定)');
+  var max = 0; order.forEach(function (s) { if ((cnt[s] || 0) > max) max = cnt[s]; });
+  var data = order.filter(function (s) { return cnt[s]; }).map(function (s) { return [s, cnt[s], pct_(cnt[s], total), bar_(cnt[s], max, 10)]; });
+  return { header: ['現ステージ', '人数', '構成比', '分布'], rows: data.length ? data : [['(進行中なし)', 0, '—', '']] };
+}
+
+// ⑱ 経路カテゴリ(チャネル種別: agent/scout等)別 ファネル＋平均到達日数(面接=11_実施済初回・内定=内定日)。
+function buildByChannelCat_(M) {
+  var H = M.H;
+  var typeOf = {}; try { confRead_('CHAN').forEach(function (r) { typeOf[String(r[0]).trim()] = String(r[1] || '').trim(); }); } catch (e) {}
+  var CAT = { agent: 'エージェント', scout: 'スカウト', '媒体': '媒体', referral: 'リファラル', organic: 'オーガニック' };
+  function catOf(ch) { var t = typeOf[String(ch || '').trim()]; return CAT[t] || (String(ch || '').trim() ? 'その他' : '(未設定)'); }
+  // 11_実施済の初回面接日(候補者ごと)
+  var firstIv = {};
+  var iv = ss_().getSheetByName(SH.IV);
+  if (iv && iv.getLastRow() >= 2) {
+    var ivd = iv.getDataRange().getValues(), ivH = headerIndex_(ivd.shift());
+    ivd.forEach(function (r) {
+      if (String(r[ivH['ステータス']]) !== '実施済') return;
+      var cid = String(r[ivH['candidate_id']] || '').trim(), dt = r[ivH['予定日時']];
+      if (!cid || !(dt instanceof Date)) return;
+      if (!firstIv[cid] || dt < firstIv[cid]) firstIv[cid] = dt;
+    });
+  }
+  var iInt = idxByType_(M.stageTypes, ['interview', 'task', 'attend', '参加']);
+  var iOff = idxByType_(M.stageTypes, ['offer', '合格']);
+  var iFin = idxByType_(M.stageTypes, ['join']); if (iFin < 0) iFin = idxByType_(M.stageTypes, ['accept']); if (iFin < 0) iFin = iOff;
+  var g = {};
+  M.rows.forEach(function (r) {
+    var cat = catOf(r[H['チャネル']]);
+    if (!g[cat]) g[cat] = { app: 0, iv: 0, off: 0, fin: 0, ivD: [], offD: [] };
+    var x = g[cat]; x.app++;
+    var si = M.idxOf[String(r[H['現ステージ']] || '')];
+    if (si != null && iInt >= 0 && si >= iInt) x.iv++;
+    if (si != null && iOff >= 0 && si >= iOff) x.off++;
+    if (si != null && iFin >= 0 && si >= iFin) x.fin++;
+    var ap = r[H['応募日']], cid = String(r[H['candidate_id']] || '').trim();
+    if (ap instanceof Date) {
+      if (firstIv[cid]) x.ivD.push((tokyoDayMs_(firstIv[cid]) - tokyoDayMs_(ap)) / 86400000);
+      var od = r[H['内定日']]; if (od instanceof Date) x.offD.push((tokyoDayMs_(od) - tokyoDayMs_(ap)) / 86400000);
+    }
+  });
+  function avg(a) { return a.length ? Math.round(a.reduce(function (s, v) { return s + v; }, 0) / a.length) + '日' : '—'; }
+  var keys = Object.keys(g).sort(function (a, b) { return g[b].app - g[a].app; });
+  var data = keys.map(function (k) { var x = g[k]; return [k, x.app, x.iv, x.off, x.fin, pct_(x.off, x.app), avg(x.ivD), avg(x.offD)]; });
+  return { header: ['経路カテゴリ', '応募', '面接相当', '内定相当', '確定', '内定率', '面接まで平均', '内定まで平均'], rows: data.length ? data : [['(データなし)', 0, 0, 0, 0, '—', '—', '—']] };
+}
+
+// 14_の「回答詳細」(タイトル=値 / …)をタイトル→値の辞書に。'='を含まない断片は直前キーの続き(グリッド/順位のrow:col)。
+function parseSurveyDetail_(detail) {
+  var out = {}, cur = null;
+  String(detail || '').split(' / ').forEach(function (seg) {
+    var i = seg.indexOf('=');
+    if (i > 0) { cur = seg.slice(0, i).trim(); out[cur] = seg.slice(i + 1); }
+    else if (cur) out[cur] += ' / ' + seg;
+  });
+  return out;
+}
+// 回答値→集計トークン。順位型(row:1位…)は上位3位の項目名、グリッド型(row:col)は「行=列」、スカラーはそのまま。
+function surveyValueTokens_(raw) {
+  var s = String(raw || '').trim(); if (!s) return [];
+  if (s.indexOf(':') < 0) return [s];
+  var toks = [];
+  s.split(' / ').forEach(function (t) {
+    var i = t.lastIndexOf(':'); if (i < 0) return;
+    var rowL = t.slice(0, i).trim(), colL = t.slice(i + 1).trim();
+    var m = colL.match(/^([1-9])位$/);
+    if (m) { if (Number(m[1]) <= 3) toks.push(rowL + '(上位)'); }  // 順位型: 上位3位を重視値として集計
+    else if (colL) toks.push(rowL + '=' + colL);                    // グリッド型: 行=列
+  });
+  return toks;
+}
+
+// ⑲ アンケート項目×到達相関: 13_「分析対象」✓項目の回答値ごとに 面接/内定到達を集計(価値観×内定寄与の汎用化)。
+function buildSurveyReach_(M) {
+  var EMPTY = { header: ['項目', '値', '回答者', '面接到達', '内定到達', '内定率'], rows: [['（13_段階別アンケート設定で「分析対象」に✓した項目が集計されます）', '', '', '', '', '']] };
+  var targets = surveyAnalysisItems_(); if (!targets.length) return EMPTY;
+  var log = ss_().getSheetByName(SH.SURVEYLOG); if (!log || log.getLastRow() < 3) return EMPTY;
+  var H = M.H;
+  var iInt = idxByType_(M.stageTypes, ['interview', 'task', 'attend', '参加']);
+  var iOff = idxByType_(M.stageTypes, ['offer', '合格']);
+  var inSeg = {}, stageIdx = {};
+  M.rows.forEach(function (r) {
+    var cid = String(r[H['candidate_id']] || '').trim(); if (!cid) return;
+    inSeg[cid] = 1; stageIdx[cid] = M.idxOf[String(r[H['現ステージ']] || '')];
+  });
+  var vals = log.getRange(3, 2, log.getLastRow() - 2, SURVEYLOG_COLS.length).getValues();
+  var lH = headerIndex_(SURVEYLOG_COLS);
+  var g = {}, seen = {};
+  vals.forEach(function (r) {
+    var cid = String(r[lH['候補者ID']] || '').trim();
+    if (!cid || !inSeg[cid]) return;  // この区分の候補者のみ
+    var pairs = parseSurveyDetail_(r[lH['回答詳細']]);
+    targets.forEach(function (item) {
+      var raw = pairs[item]; if (raw == null || String(raw).trim() === '') return;
+      surveyValueTokens_(raw).forEach(function (val) {
+        var sk = cid + '|' + item + '|' + val; if (seen[sk]) return; seen[sk] = 1;  // 同一候補者の重複回答は1回
+        var gk = item + '|' + val;
+        if (!g[gk]) g[gk] = { item: item, val: val, n: 0, iv: 0, off: 0 };
+        g[gk].n++;
+        var si = stageIdx[cid];
+        if (si != null && iInt >= 0 && si >= iInt) g[gk].iv++;
+        if (si != null && iOff >= 0 && si >= iOff) g[gk].off++;
+      });
+    });
+  });
+  var keys = Object.keys(g).sort(function (a, b) {
+    var A = g[a], B = g[b];
+    return A.item === B.item ? (B.n - A.n) : (A.item < B.item ? -1 : 1);
+  });
+  var data = keys.map(function (k) { var x = g[k]; return [x.item, x.val, x.n, x.iv, x.off, pct_(x.off, x.n)]; });
+  return data.length ? { header: EMPTY.header, rows: data } : EMPTY;
 }
 
 // ⑪ 競合先別: 接触数・自社勝ち(承諾/入社)・負け(辞退)・勝率
@@ -2500,6 +2708,7 @@ function syncManageEditToMaster_(e, sh) {
   var val = e.range.getValue();
   if (MANAGE_DATE_COLS[label]) { var d = parseDateLoose_(val); m.getRange(target + 1, mH[label] + 1).setValue(d || ''); }
   else m.getRange(target + 1, mH[label] + 1).setValue(val == null ? '' : val);
+  if (label === '現ステージ') { try { stampStageStart_(m, target + 1, mH); } catch (e2) {} }  // 調整期限/停滞の起点を更新
 }
 
 // 説明会参加者(新卒②の母集団): 11_の「説明会」ステージに行がある候補者IDの集合。
@@ -3062,6 +3271,13 @@ function renderWeeklyReportAll_(sh, row, asOf) {
     w_move: function () {
       row = subhead_(sh, row, '▎今週の動き（直近7日）');
       row = table_(sh, row, 2, ['新規応募', '内定', '承諾', '入社'], [[wd.w.app, wd.w.off, wd.w.acc, wd.w.join]], []);
+      try {
+        var sd = weeklySnapDiff_(asOf);
+        if (sd.hasBase) {
+          row = subhead_(sh, row, '▎今週のファネル増加（前週スナップショット差分・5段正規化）');
+          row = table_(sh, row, 2, ['区分', '応募+', '書類+', '面接+', '内定+', '確定+'], sd.rows, []);
+        }
+      } catch (e) { Logger.log('weeklySnapDiff_ error: ' + e); }
     },
     w_upcoming: function () {
       row = subhead_(sh, row, '▎来週の面接予定（7日内）');
@@ -3477,6 +3693,40 @@ function insights_(M) {
   return { good: good, issue: issue, risk: risk };
 }
 
+// 週アンカー(その週の月曜・東京)。スナップショットの週キー。
+function weekAnchor_(n) {
+  var d = tokyoDayMs_(n || nowTokyo_());
+  var day = new Date(d).getUTCDay();               // 0=日
+  var mon = d - ((day + 6) % 7) * 86400000;        // 直近の月曜
+  return Utilities.formatDate(new Date(mon), 'UTC', 'yyyy-MM-dd');
+}
+// 週次スナップショット差分: 5段正規化ファネル到達数を週キー付きでDocumentPropertiesへ保存し「今週の増加」を算出。
+// 同週内の再実行では基準(base)を固定＝差分が消えない。到達日列が無くてもステージ進行の動きが出せる。
+function weeklySnapDiff_(asOf) {
+  var props = PropertiesService.getDocumentProperties();
+  var snap = null; try { snap = JSON.parse(props.getProperty('weeklyFunnelSnap') || 'null'); } catch (e) { snap = null; }
+  var wk = weekAnchor_(asOf);
+  var cur = {};
+  enabledSegments_().forEach(function (s) {
+    var M = computeSegment_(s); if (!M.stageNames.length) { cur[s] = null; return; }
+    var nf = normalizedFunnel_(M);
+    cur[s] = { app: nf.app, doc: nf.doc, interview: nf.interview, offer: nf.offer, fin: nf.fin };
+  });
+  var base = (snap && snap.week === wk) ? snap.base : (snap ? snap.cur : null);  // 週替わりで前回curが基準に回転
+  try { props.setProperty('weeklyFunnelSnap', JSON.stringify({ week: wk, base: base, cur: cur })); }
+  catch (e2) { Logger.log('weeklyFunnelSnap 保存失敗: ' + e2); }
+  var rows = [];
+  if (base) {
+    for (var s2 in cur) {
+      if (!cur[s2]) continue;
+      var b = base[s2] || { app: 0, doc: 0, interview: 0, offer: 0, fin: 0 };
+      function dlt(k) { var d0 = (cur[s2][k] || 0) - (b[k] || 0); return d0 > 0 ? '+' + d0 : String(d0); }
+      rows.push([s2, dlt('app'), dlt('doc'), dlt('interview'), dlt('offer'), dlt('fin')]);
+    }
+  }
+  return { hasBase: !!base && rows.length > 0, rows: rows };
+}
+
 // 週次データ(今週の動き/来週の面接/要対応)。asOf 基準(空=今日)。
 function weeklyData_(rows, H, ivData, ivH, asOf) {
   var anchor = tokyoDayMs_(asOf || nowTokyo_());
@@ -3756,40 +4006,50 @@ function saveEvaluation() {
   }
   if (!name) { toast_('候補者ID「' + cid + '」がマスタに見つかりません'); return; }
 
+  writeEvaluation_({
+    cid: cid, name: name, seg: seg, job: job, stage: stage,
+    date: (date instanceof Date) ? date : new Date(), member: member, format: format, result: result, url: url,
+    good: good, concern: concern, nextA: nextA, overall: overall, ev: ev, imemos: imemos
+  });
+  buildEvalNote_();
+  toast_('保存: ' + name + ' / 総合 ' + (ev.letter || '—') + (ev.ng ? '（NG・基準未達）' : '') + ' → 11_記録・マスタ更新');
+}
+
+// 評価の書き込みコア(12_ノート/面接官向け評価フォーム 共通)。11_へ1行追記→マスタ集計更新→Slack申し送り。
+function writeEvaluation_(p) {
   var memoParts = [];
-  if (overall) memoParts.push(overall);
-  if (good) memoParts.push('◎良かった点: ' + good);
-  if (concern) memoParts.push('△懸念: ' + concern);
-  if (nextA) memoParts.push('→次: ' + nextA);
+  if (p.overall) memoParts.push(p.overall);
+  if (p.good) memoParts.push('◎良かった点: ' + p.good);
+  if (p.concern) memoParts.push('△懸念: ' + p.concern);
+  if (p.nextA) memoParts.push('→次: ' + p.nextA);
   var memo = memoParts.join('\n');
 
   var iv = sheet_(SH.IV); var ivH = headerIndex_(iv.getRange(1, 1, 1, iv.getLastColumn()).getValues()[0]);
   var arr = new Array(IV_COLS.length); for (var k = 0; k < arr.length; k++) arr[k] = '';
+  var ev = p.ev;
   arr[ivH['interview_id']] = nextInterviewId_(iv, ivH);
-  arr[ivH['candidate_id']] = cid; arr[ivH['候補者名']] = name; arr[ivH['区分']] = seg; arr[ivH['職種']] = job;
-  arr[ivH['ステージ']] = stage; arr[ivH['予定日時']] = (date instanceof Date) ? date : new Date();
-  arr[ivH['面接URL']] = url; arr[ivH['面接官']] = member; arr[ivH['形式']] = format;
-  arr[ivH['ステータス']] = '実施済'; arr[ivH['結果']] = result;
+  arr[ivH['candidate_id']] = p.cid; arr[ivH['候補者名']] = p.name; arr[ivH['区分']] = p.seg; arr[ivH['職種']] = p.job;
+  arr[ivH['ステージ']] = p.stage; arr[ivH['予定日時']] = (p.date instanceof Date) ? p.date : new Date();
+  arr[ivH['面接URL']] = p.url || ''; arr[ivH['面接官']] = p.member || ''; arr[ivH['形式']] = p.format || 'オンライン';
+  arr[ivH['ステータス']] = '実施済'; arr[ivH['結果']] = p.result || '';
   arr[ivH['評点']] = ev.letter; arr[ivH['評価メモ']] = memo;
   arr[ivH['総合点']] = ev.n ? ev.avg : '';
-  arr[ivH['評価明細']] = JSON.stringify({ scores: ev.detail, memos: imemos });
+  arr[ivH['評価明細']] = JSON.stringify({ scores: ev.detail, memos: p.imemos || {} });
   arr[ivH['判定']] = ev.n ? (ev.ng ? 'NG' : '合') : '';
   iv.getRange(iv.getLastRow() + 1, 1, 1, arr.length).setValues([arr]);
 
   syncInterviewSummary_();
   syncNextInterview();
-  buildEvalNote_();
   // WP26: 評価申し送りをSlackへ(有効なら)
   var st = slackTargetByPrefix_('評価申し送り');
   if (st && st.enabled && st.channel) {
-    var lines = ['*評価申し送り｜' + name + '（' + seg + ' / ' + stage + '）*',
-      '総合評価: ' + (ev.letter || '—') + (ev.ng ? '  ⚠NG（基準未達）' : '') + (member ? '　面接官: ' + member : '')];
-    if (good) lines.push('◎ 良かった点: ' + good);
-    if (concern) lines.push('△ 懸念点: ' + concern);
-    if (nextA) lines.push('→ 次アクション: ' + nextA);
+    var lines = ['*評価申し送り｜' + p.name + '（' + p.seg + ' / ' + p.stage + '）*',
+      '総合評価: ' + (ev.letter || '—') + (ev.ng ? '  ⚠NG（基準未達）' : '') + (p.member ? '　面接官: ' + p.member : '')];
+    if (p.good) lines.push('◎ 良かった点: ' + p.good);
+    if (p.concern) lines.push('△ 懸念点: ' + p.concern);
+    if (p.nextA) lines.push('→ 次アクション: ' + p.nextA);
     sendSlack_(st.channel, lines.join('\n'));
   }
-  toast_('保存: ' + name + ' / 総合 ' + (ev.letter || '—') + (ev.ng ? '（NG・基準未達）' : '') + ' → 11_記録・マスタ更新');
 }
 function nextInterviewId_(iv, ivH) {
   var data = iv.getDataRange().getValues(); var max = 0;
@@ -3988,6 +4248,8 @@ function onEdit(e) {
         applyStageValidationForRow_(sh, rown, String(e.range.getValue()), H);
         return;
       }
+      // 現ステージ変更 → 開始日を本日でスタンプ(調整期限/停滞の起点)
+      if (col === H['現ステージ'] + 1) { stampStageStart_(sh, rown, H); return; }
       // 履歴書/職務経歴書リンク入力 → 対応する回収日が空なら本日(東京)を自動記録
       DOC_TYPES.forEach(function (d) {
         if (col !== H[d.link] + 1) return;
@@ -4022,6 +4284,11 @@ function onEdit(e) {
         for (var i = 0; i < STAGE_CATALOG.length; i++) { if (STAGE_CATALOG[i][0] === picked) { hit = STAGE_CATALOG[i][1]; break; } }
         if (hit) sh.getRange(er, LS.col + 3).setValue(hit);
       }
+      // エントリー方式の変更 → 09_CSV取込タブの表示/非表示を即時反映
+      var BM = CONF_LAYOUT.BASIC.methodCell;
+      if (er === BM[0] && ec === BM[1]) { try { applyCsvVisibility_(); } catch (e4) {} }
+    } else if (name === SH.NA) {
+      cockpitEdit_(e, sh);  // 40_選考コックピット: SYNC列→マスタ書き戻し / 通知送信☑→面接確定処理
     } else if (name.slice(-MANAGE_SUFFIX.length) === MANAGE_SUFFIX) {
       syncManageEditToMaster_(e, sh);  // ②進捗管理の作業ビュー編集→マスタへ書き戻し(正本=マスタ)
     }
@@ -4393,7 +4660,9 @@ function importCsv() {
   saveRawImport_(grid);
   var r = importCsvGrid_(grid);
   var ivr = importAtsBlocks_(r.head, r.ids || []);
-  syncNextInterview(); syncInterviewSummary_(); renderAllDashboards_();
+  syncNextInterview(); syncInterviewSummary_();
+  try { backfillStageStart_(); } catch (e2) {}  // 取込直後から調整期限/滞在日数を有効化
+  renderAllDashboards_();
   sh.getRange(23, 3, 1, 8).merge().setValue('取込 新規' + r.added + '件 / 更新' + r.updated + '件 / 面接 ' + ivr.interviews + '行（' + Utilities.formatDate(new Date(), ss_().getSpreadsheetTimeZone(), 'HH:mm') + '）').setFontColor(C.INK);
   toast_('CSV取込: 新規' + r.added + '件 / 更新' + r.updated + '件 / 面接' + ivr.interviews + '行');
 }
@@ -4621,7 +4890,9 @@ function importUploadedCsv(b64, charset) {
     saveRawImport_(grid);
     var r = importCsvGrid_(grid);
     var ivr = importAtsBlocks_(r.head, r.ids || []);
-    syncNextInterview(); syncInterviewSummary_(); renderAllDashboards_();
+    syncNextInterview(); syncInterviewSummary_();
+    try { backfillStageStart_(); } catch (e2) {}  // 取込直後から調整期限/滞在日数を有効化
+    renderAllDashboards_();
     return { ok: true, added: r.added, updated: r.updated, interviews: ivr.interviews };
   } catch (e) { return { ok: false, msg: String(e && e.message || e) }; }
 }
@@ -4805,6 +5076,7 @@ function appendCandidate_(rec) {
   if (!row[mH['応募日']]) row[mH['応募日']] = new Date();
   if (!row[mH['ステータス']]) row[mH['ステータス']] = '進行中';
   if (!row[mH['チャネル']]) row[mH['チャネル']] = 'フォーム';
+  if (mH['現ステージ開始日'] != null && !row[mH['現ステージ開始日']]) row[mH['現ステージ開始日']] = row[mH['応募日']];  // 調整期限/停滞の起点
   m.getRange(m.getLastRow() + 1, 1, 1, MASTER_COLS.length).setValues([row]);
   return cid;
 }
@@ -4834,6 +5106,7 @@ function onFormSubmit(e) {
     var fid = e.source.getId();
     var props = PropertiesService.getDocumentProperties();
     if (String(props.getProperty('surveyFormId') || '') === fid) { recordSurveyResponse_(e); return; }  // 参加後アンケート
+    if (String(props.getProperty('evalFormId') || '') === fid) { recordEvalResponse_(e); return; }      // 面接官向け評価フォーム
     var smap = {}; try { smap = JSON.parse(props.getProperty('stageSurveyForms') || '{}'); } catch (er) {}
     for (var st in smap) { if (smap[st] === fid) { recordStageSurvey_(e, st); return; } }  // 段階別アンケート
     var map = {}; try { map = JSON.parse(props.getProperty('formIds') || '{}'); } catch (er) {}
@@ -4963,9 +5236,8 @@ function createSurveyForm() {
   Logger.log('アンケートURL: ' + form.getPublishedUrl());
 }
 
-// アンケート回答 → 新卒②(新卒_進捗管理)の該当候補者(メール一致)へ 説明会参加状況/満足度/志望度 を記録
+// アンケート回答 → 新卒②(新卒_進捗管理)の該当候補者(メール一致)へ 説明会参加状況/満足度/志望度 を記録(＋自動昇格)
 function recordSurveyResponse_(e) {
-  var sh = ss_().getSheetByName(manageName_('新卒')); if (!sh || sh.getLastRow() < 3) return;
   var email = '', sat = '', asp = '';
   e.response.getItemResponses().forEach(function (ir) {
     var t = String(ir.getItem().getTitle()), v = String(ir.getResponse() || '');
@@ -4977,6 +5249,13 @@ function recordSurveyResponse_(e) {
   var m = sheet_(SH.MASTER), md = m.getDataRange().getValues(), mH = headerIndex_(md[0]), cid = '';
   for (var j = 1; j < md.length; j++) { if (String(md[j][mH['連絡先']] || '').trim().toLowerCase() === email) { cid = String(md[j][mH['candidate_id']]); break; } }
   if (!cid) return;
+  // 自動昇格(設定ON時): 参加後アンケート回答=説明会参加の証跡 → 説明会段(名前に"説明" or screen/attend型)へ昇格
+  try {
+    var sts = segStages_('新卒'), bi = -1;
+    for (var bk = 0; bk < sts.length; bk++) { if (sts[bk].type === 'screen' || sts[bk].type === 'attend' || sts[bk].name.indexOf('説明') >= 0) { bi = bk; break; } }
+    if (bi >= 0) maybePromoteOnSurvey_(cid, sts[bi].name);
+  } catch (ep) { Logger.log('recordSurveyResponse_ promote: ' + ep); }
+  var sh = ss_().getSheetByName(manageName_('新卒')); if (!sh || sh.getLastRow() < 3) return;
   var lc = sh.getLastColumn(), hdr = sh.getRange(2, 1, 1, lc).getValues()[0], oH = {}; hdr.forEach(function (h, i) { oH[String(h)] = i + 1; });
   if (oH['候補者ID'] == null) return;
   var last = sh.getLastRow();
@@ -5019,8 +5298,9 @@ function buildSurveyConfigTab_() {
   sh.getRange(3, 4, N, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(SURVEY_TYPES, true).setAllowInvalid(true).build());
   sh.getRange(3, 5, N, 1).insertCheckboxes();
   sh.getRange(3, 6, N, 1).insertCheckboxes();
-  var W = [120, 150, 230, 90, 56, 56, 240]; for (var ci = 0; ci < W.length; ci++) sh.setColumnWidth(ci + 1, W[ci]);
-  note_(sh, N + 4, SURVEYCFG_COLS.length, '同じ「フォーム名」の行をまとめて1つのGoogleフォームにします＝任意の名前でいくつでも作れます（例: 会社説明会アンケート / 一次面接アンケート / 内定者アンケート / イベント参加フォーム）。フォーム名を選考段階名(説明選考会・一次面接 等)にすると、回答の満足度/志望度が進捗管理タブの該当候補者に自動反映。タイプ=5段階/満足度/志望度/短文/長文/選択/順位/グリッド。「選択」型は選択肢欄に改行orカンマ区切り。「順位」型は選択肢欄に項目を並べると 行=項目・列=1位…N位 のグリッドに（価値観ランキング等）。「グリッド」型は選択肢欄を『行 ｜ 列』で区切る（例: 成長,待遇,人間関係 ｜ とても重要,普通,不要／列省略時は重要度5段階）。有効✓のある項目だけ出力。メニュー「採用 ▸ アンケート/フォームを作成・更新」で生成→URLは 01_設定 下部「生成フォームURL」。回答は 14_アンケート回答 に自動記録。');
+  sh.getRange(3, 8, N, 1).insertCheckboxes();  // 分析対象(⑲アンケート×到達相関パネルの集計対象)
+  var W = [120, 150, 230, 90, 56, 56, 240, 64]; for (var ci = 0; ci < W.length; ci++) sh.setColumnWidth(ci + 1, W[ci]);
+  note_(sh, N + 4, SURVEYCFG_COLS.length, '同じ「フォーム名」の行をまとめて1つのGoogleフォームにします＝任意の名前でいくつでも作れます（例: 会社説明会アンケート / 一次面接アンケート / 内定者アンケート / イベント参加フォーム）。フォーム名を選考段階名(説明選考会・一次面接 等)にすると、回答の満足度/志望度が進捗管理タブの該当候補者に自動反映。タイプ=5段階/満足度/志望度/短文/長文/選択/順位/グリッド。「選択」型は選択肢欄に改行orカンマ区切り。「順位」型は選択肢欄に項目を並べると 行=項目・列=1位…N位 のグリッドに（価値観ランキング等）。「グリッド」型は選択肢欄を『行 ｜ 列』で区切る（例: 成長,待遇,人間関係 ｜ とても重要,普通,不要／列省略時は重要度5段階）。有効✓のある項目だけ出力。「分析対象」✓の項目は、ダッシュボードの「⑲アンケート×到達相関」パネルで回答値×選考到達のクロス集計対象になります（例: 価値観ランキング）。メニュー「採用 ▸ アンケート/フォームを作成・更新」で生成→URLは 01_設定 下部「生成フォームURL」。回答は 14_アンケート回答 に自動記録。');
 }
 
 // 14_アンケート回答: 回答ログ(追記専用)。データがあれば見出しのみ整える(消さない)。
@@ -5117,6 +5397,7 @@ function recordStageSurvey_(e, stage) {
   var log = sheet_(SH.SURVEYLOG);
   var nextR = Math.max(log.getLastRow() + 1, 3);
   log.getRange(nextR, 2, 1, SURVEYLOG_COLS.length).setValues([[fmtDT_(nowTokyo_()), cid, name, seg, stage, sat, asp, detail.join(' / ')]]);
+  if (cid) { try { maybePromoteOnSurvey_(cid, stage); } catch (ep) { Logger.log('recordStageSurvey_ promote: ' + ep); } }  // フォーム名=ステージ名なら自動昇格(設定ON時)
   if (cid && !seg && (sat || asp)) Logger.log('recordStageSurvey_: 区分不明のため②反映をスキップ(cid=' + cid + ')');  // 誤って新卒②へ入れない
   if (cid && seg && (sat || asp)) {
     try {
@@ -5133,6 +5414,146 @@ function recordStageSurvey_(e, stage) {
       }
     } catch (er) { Logger.log('recordStageSurvey_ reflect: ' + er); }
   }
+}
+
+/* ============================== 面接官向け 評価フォーム＋アンケート自動昇格 ============================== */
+
+// 面接評価フォームの候補者選択肢(「氏名｜candidate_id」・進行中/内定のみ)。回答時に末尾のIDで突合する。
+function evalFormCandidateChoices_() {
+  var am = allMaster_(), H = am.H, out = [];
+  am.rows.forEach(function (r) {
+    var st = String(r[H['ステータス']] || '').trim();
+    if (st !== '進行中' && st !== '内定') return;
+    var cid = String(r[H['candidate_id']] || '').trim(); if (!cid) return;
+    out.push(String(r[H['氏名']] || '') + '｜' + cid);
+  });
+  return out.length ? out : ['（選考中の候補者がいません）'];
+}
+
+// 面接官向け評価フォームを生成/更新(メニュー)。01_設定の評価項目から動的生成。回答→recordEvalResponse_→11_へ自動記録。
+function createEvalForm() {
+  if (!requireCompany_('面接評価フォーム生成')) return;
+  var props = PropertiesService.getDocumentProperties(), cn = companyName_();
+  var form = null, ex = String(props.getProperty('evalFormId') || '').trim();
+  if (ex) { try { form = FormApp.openById(ex); } catch (e) { form = null; } }
+  if (!form) { form = FormApp.create(cn + ' 面接評価フォーム（面接官用）'); props.setProperty('evalFormId', form.getId()); }
+  form.setTitle(cn + ' 面接評価フォーム（面接官用）')
+      .setDescription('面接実施後にご入力ください。回答は採用管理シート（11_面接スケジュール・候補者マスタ）へ自動記録され、申し送りにも反映されます。');
+  form.getItems().forEach(function (it) { form.deleteItem(it); });
+  setChoicesSafe_(form.addListItem().setTitle('候補者').setRequired(true), evalFormCandidateChoices_());
+  form.addTextItem().setTitle('候補者ID（上のリストに見つからない場合のみ入力）');
+  var stages = [];
+  enabledSegments_().forEach(function (s) {
+    segStages_(s).forEach(function (st) {
+      if (['entry', 'offer', 'accept', 'join'].indexOf(st.type) >= 0) return;  // 選考段のみ
+      if (stages.indexOf(st.name) < 0) stages.push(st.name);
+    });
+  });
+  setChoicesSafe_(form.addListItem().setTitle('選考ステージ').setRequired(true), stages);
+  var members = [];
+  try { members = confRead_('MEMBER').map(function (r) { return String(r[0]).trim(); }).filter(Boolean); } catch (e) {}
+  setChoicesSafe_(form.addListItem().setTitle('面接官（あなた）').setRequired(true), members);
+  form.addDateItem().setTitle('面接日');
+  evalItems_().forEach(function (it) {
+    form.addScaleItem().setTitle(it.name).setBounds(1, 5).setLabels('低い', '高い');
+  });
+  form.addParagraphTextItem().setTitle('良かった点');
+  form.addParagraphTextItem().setTitle('懸念点');
+  form.addParagraphTextItem().setTitle('次アクション');
+  form.addParagraphTextItem().setTitle('総合所感');
+  form.addListItem().setTitle('合否推薦').setChoiceValues(IV_RESULT);
+  ensureFormTrigger_(form);
+  saveFormUrls_({ '面接評価(面接官用)': form.getPublishedUrl() });
+  toast_('面接評価フォームを生成/更新しました（URLは01_設定下部「生成フォームURL」）');
+  Logger.log('面接評価フォームURL: ' + form.getPublishedUrl());
+}
+
+// 評価フォームの候補者選択肢だけを最新化(refreshAll=毎朝9時トリガーから。設問構成は変えない=軽量)。
+function syncEvalFormChoices_() {
+  var ex = String(PropertiesService.getDocumentProperties().getProperty('evalFormId') || '').trim(); if (!ex) return;
+  var form = null; try { form = FormApp.openById(ex); } catch (e) { return; }
+  form.getItems(FormApp.ItemType.LIST).forEach(function (it) {
+    if (String(it.getTitle()).trim() !== '候補者') return;
+    try { it.asListItem().setChoiceValues(evalFormCandidateChoices_()); } catch (e2) { Logger.log('syncEvalFormChoices_ 失敗: ' + e2); }
+  });
+}
+
+// 評価フォーム回答 → computeEval_ → writeEvaluation_(11_追記・マスタ集計・Slack申し送り)。照合失敗は14_へ証跡。
+function recordEvalResponse_(e) {
+  var cid = '', stage = '', who = '', date = null, rec = '';
+  var scores = {}, texts = { '良かった点': '', '懸念点': '', '次アクション': '', '総合所感': '' };
+  var items = evalItems_(), itemNames = {}; items.forEach(function (it) { itemNames[it.name] = 1; });
+  e.response.getItemResponses().forEach(function (ir) {
+    var t = String(ir.getItem().getTitle()).trim(), v = ir.getResponse();
+    if (t === '候補者') { var m0 = String(v || '').match(/｜\s*(\S+)\s*$/); if (m0) cid = m0[1]; }
+    else if (t.indexOf('候補者ID') === 0) { var s0 = String(v || '').trim(); if (s0) cid = s0; }  // 手入力フォールバック優先
+    else if (t === '選考ステージ') stage = String(v || '');
+    else if (t.indexOf('面接官') === 0) who = String(v || '');
+    else if (t === '面接日') { var dd = parseDateLoose_(v); if (dd) date = dd; }
+    else if (t === '合否推薦') rec = String(v || '');
+    else if (itemNames[t]) { var n0 = Number(v); if (n0) scores[t] = n0; }
+    else if (texts[t] != null) texts[t] = String(v || '');
+  });
+  var m = sheet_(SH.MASTER), md = m.getDataRange().getValues(), mH = headerIndex_(md[0]);
+  var name = '', seg = '', job = '';
+  if (cid) {
+    for (var j = 1; j < md.length; j++) {
+      if (String(md[j][mH['candidate_id']]).trim() === String(cid).trim()) {
+        name = String(md[j][mH['氏名']] || ''); seg = String(md[j][mH['区分']] || ''); job = String(md[j][mH['職種']] || ''); break;
+      }
+    }
+  }
+  if (!name) {  // 照合失敗 → 14_アンケート回答に証跡(サイレントに落とさない)
+    try {
+      var log = sheet_(SH.SURVEYLOG), nextR = Math.max(log.getLastRow() + 1, 3);
+      log.getRange(nextR, 2, 1, SURVEYLOG_COLS.length).setValues([[fmtDT_(nowTokyo_()), cid, '(照合失敗)', '', '面接評価フォーム', '', '',
+        '面接官=' + who + ' / ステージ=' + stage + ' / 評価は未記録→候補者IDを確認しフォーム再送 or 12_ノートで入力']]);
+    } catch (e2) { Logger.log('recordEvalResponse_ 証跡記録失敗: ' + e2); }
+    return;
+  }
+  var ev = computeEval_(items, scores);
+  writeEvaluation_({
+    cid: cid, name: name, seg: seg, job: job, stage: stage,
+    date: date || new Date(), member: who, format: 'オンライン', result: rec, url: '',
+    good: texts['良かった点'], concern: texts['懸念点'], nextA: texts['次アクション'], overall: texts['総合所感'],
+    ev: ev, imemos: {}
+  });
+}
+
+// アンケート回答による自動昇格(01_設定❾トグルON時)。逆行なし・進行中のみ・ステージ名不一致は何もしない。
+function maybePromoteOnSurvey_(cid, targetStage) {
+  try {
+    if (!cid || !targetStage) return false;
+    var L = CONF_LAYOUT.SURVEY;
+    if (!L.autoPromoteCell || !confTrue_(sheet_(SH.CONF).getRange(L.autoPromoteCell[0], L.autoPromoteCell[1]).getValue())) return false;
+    var m = sheet_(SH.MASTER), md = m.getDataRange().getValues(), mH = headerIndex_(md[0]);
+    var ti = -1;
+    for (var i = 1; i < md.length; i++) { if (String(md[i][mH['candidate_id']]).trim() === String(cid).trim()) { ti = i; break; } }
+    if (ti < 0) return false;
+    if (String(md[ti][mH['ステータス']] || '').trim() !== '進行中') return false;  // 見送り/辞退/内定以降は動かさない
+    var seg = String(md[ti][mH['区分']] || '').trim();
+    var names = segStages_(seg).map(function (s) { return s.name; });
+    var ci = names.indexOf(String(md[ti][mH['現ステージ']] || '').trim());
+    var tgt = names.indexOf(String(targetStage).trim());
+    if (tgt < 0) return false;   // フォーム名がステージ名でない → 昇格対象外
+    if (ci < 0) return false;    // 現ステージ不明 → 安全側でスキップ
+    if (ci >= tgt) return false; // 逆行防止(既に到達済)
+    m.getRange(ti + 1, mH['現ステージ'] + 1).setValue(names[tgt]);
+    stampStageStart_(m, ti + 1, mH);
+    Logger.log('自動昇格: ' + cid + ' → ' + names[tgt]);
+    return true;
+  } catch (e) { Logger.log('maybePromoteOnSurvey_ error: ' + e); return false; }
+}
+
+// 13_で「分析対象」✓のアンケート項目名(⑲アンケート×到達相関パネルの対象)。
+function surveyAnalysisItems_() {
+  var sh = ss_().getSheetByName(SH.SURVEYCFG); var out = [];
+  if (!sh || sh.getLastRow() < 3) return out;
+  sh.getRange(3, 2, sh.getLastRow() - 2, SURVEYCFG_COLS.length).getValues().forEach(function (r) {
+    var name = String(r[1] || '').trim(); if (!name) return;
+    if (confTrue_(r[6]) && out.indexOf(name) < 0) out.push(name);
+  });
+  return out;
 }
 
 /* ============================== 媒体(エージェント)別 バイネーム進捗シート ============================== */
@@ -5258,6 +5679,16 @@ function healthCheck_(repair) {
       else rec('区分別進捗管理', '要対応', '欠落: ' + missR.join(','));
     } else rec('区分別進捗管理', 'OK', enR.length + '区分');
   } catch (e) { rec('区分別進捗管理', 'OK', ''); }
+  // 7) 選考コックピット: 欠落は再構築。SLA未設定は警告のみ(機能を使わない運用も正)。送信ロックは仕様として記録。
+  try {
+    if (!ss.getSheetByName(SH.NA)) {
+      if (repair) { try { buildCockpit_(); rec('選考コックピット', '修復', '欠落を再構築'); } catch (e6) { rec('選考コックピット', '要対応', '欠落/再構築失敗'); } }
+      else rec('選考コックピット', '要対応', '欠落');
+    } else rec('選考コックピット', 'OK', '');
+    var slaN = 0; try { slaN = confRead_('SLA').length; } catch (e7) {}
+    if (!slaN) rec('調整期限SLA', '要対応', '01_設定のSLA表が空(調整期限/停滞アラートが無効)。healthCheck修復対象外=設定タブ再構築(初期セットアップ)でシードされます');
+    if (!MAIL_MASTER_ENABLED) rec('メール送信ロック', 'OK', '🔒ロック中(仕様)・応募者向けメールは送信されません。解除=コード定数 MAIL_MASTER_ENABLED');
+  } catch (e5) { rec('選考コックピット', 'OK', ''); }
   // ログ出力(99_ヘルスログ・最新を上に)
   var log = ss.getSheetByName('99_ヘルスログ') || ss.insertSheet('99_ヘルスログ');
   if (log.getLastRow() === 0) {
@@ -5450,7 +5881,7 @@ var MAIL_CELLS = {
 function buildMailTab_() {
   var sh = sheet_(SH.MAIL);
   var marker = sh.getRange(MAIL_CELLS.thanksSubj[0], MAIL_CELLS.thanksSubj[1]).getValue();
-  if (sh.getLastRow() > 5 && String(marker || '').trim() !== '') { ensureMailReminders_(sh); return; }  // 既に生成済→編集保持(段階別リマインド表だけ後付け確認)
+  if (sh.getLastRow() > 5 && String(marker || '').trim() !== '') { ensureMailReminders_(sh); ensureMailNotifyTemplates_(sh); renderMailLockState_(sh); return; }  // 既に生成済→編集保持(後付け表のみ確認)
   clearSheet_(sh);
   ensureGrid_(sh, 30, 12);
   sh.setColumnWidth(1, 28); sh.setColumnWidth(2, 150);
@@ -5484,6 +5915,35 @@ function buildMailTab_() {
 
   note_(sh, 24, 10, '差込タグ: {氏名} {区分} {職種} {ステージ} {日時} {形式} {面接官} {URL} {会社名}。サンクス=エントリー(応募日)当日に1回。リマインド=11_面接スケジュールの予定日時の指定日数前。標準は「面接」「説明会」の2テンプレ。下の「段階別リマインド設定」で段ごとに 何日前・文面 を上書きできます。自動送信ONで毎朝8時に送信。送付元アドレスはGAS仕様で実行アカウント固定（表示名/返信先のみ指定可）。');
   ensureMailReminders_(sh);
+  ensureMailNotifyTemplates_(sh);
+  renderMailLockState_(sh);
+}
+
+// 送信ロック状態の可視化(07_の行2)。ロック解除はコード定数 MAIL_MASTER_ENABLED の変更のみ(シートからは不可)。
+function renderMailLockState_(sh) {
+  var msg = MAIL_MASTER_ENABLED ? '' : '🔒 送信ロック中：応募者向けメール(サンクス/リマインド/確定・変更通知)は1通も送信されません（管理者がコード定数 MAIL_MASTER_ENABLED を有効化するまでドライラン扱い）。';
+  try { sh.getRange(2, 2, 1, 1).setValue(msg).setFontColor(C.RED).setFontSize(9).setFontWeight('bold'); } catch (e) {}
+}
+
+// 面接 確定/変更通知テンプレート(07_下部・後付け・編集保持)。40_選考コックピットの「確定＆通知」が使用。
+var MAIL_NOTIFY_CELLS = { titleRow: 40, confirmSubj: [42, 3], confirmBody: [43, 3], changeSubj: [46, 3], changeBody: [47, 3] };
+var MAIL_NOTIFY_DEF = {
+  confirmSubj: '【{会社名}】{ステージ}の日程確定のご連絡（{日時}）',
+  confirmBody: '{氏名} 様\n\nお世話になっております。{会社名} 採用担当です。\n{ステージ}の日程が確定いたしましたのでご連絡いたします。\n\n■ 日時：{日時}\n■ 形式：{形式}\n■ 会場／接続先：{URL}\n\n本メールをご確認のうえ、「確認しました」とご返信ください。\nご不明点やご都合が悪くなった場合は、本メールへご連絡ください。\n\n{会社名} 採用担当',
+  changeSubj: '【{会社名}】{ステージ}の日程変更のご連絡（{日時}）',
+  changeBody: '{氏名} 様\n\nお世話になっております。{会社名} 採用担当です。\n{ステージ}の日程が下記の通り変更となりましたのでご連絡いたします。\n\n■ 変更後日時：{日時}\n■ 形式：{形式}\n■ 会場／接続先：{URL}\n\n本メールをご確認のうえ、「確認しました」とご返信ください。\n\n{会社名} 採用担当'
+};
+function ensureMailNotifyTemplates_(sh) {
+  var NC = MAIL_NOTIFY_CELLS;
+  if (String(sh.getRange(NC.titleRow, 2).getValue() || '').trim() !== '') return;  // 既にある→編集保持
+  ensureGrid_(sh, NC.changeBody[0] + 3, 12);
+  subhead_(sh, NC.titleRow, '▎面接 確定/変更通知テンプレート（40_選考コックピットの「確定＆通知」で送信。{ }は差込・空=既定文面）');
+  function lbl(r, t) { sh.getRange(r, 2).setValue(t).setFontWeight('bold').setFontColor(C.BLACK).setVerticalAlignment('middle'); }
+  function box(r) { var rg = sh.getRange(r, 3, 1, 9); rg.breakApart(); rg.merge().setBackground(DESIGN_INPUT_BG).setVerticalAlignment('top').setWrap(true).setBorder(true, true, true, true, false, false, C.BORDER, SpreadsheetApp.BorderStyle.SOLID); return rg; }
+  lbl(NC.confirmSubj[0], '確定通知 件名'); box(NC.confirmSubj[0]).setValue(MAIL_NOTIFY_DEF.confirmSubj);
+  lbl(NC.confirmBody[0], '確定通知 本文'); box(NC.confirmBody[0]).setValue(MAIL_NOTIFY_DEF.confirmBody); sh.setRowHeight(NC.confirmBody[0], 130);
+  lbl(NC.changeSubj[0], '変更通知 件名'); box(NC.changeSubj[0]).setValue(MAIL_NOTIFY_DEF.changeSubj);
+  lbl(NC.changeBody[0], '変更通知 本文'); box(NC.changeBody[0]).setValue(MAIL_NOTIFY_DEF.changeBody); sh.setRowHeight(NC.changeBody[0], 130);
 }
 
 // 段階別リマインド設定テーブル(07_メール設定の下部)。既存07にも後付けで追加し、編集は保持(タイトル有→何もしない)。
@@ -5537,8 +5997,12 @@ function mailConfig_() {
     thanks: { subj: g('thanksSubj'), body: g('thanksBody') },
     iv: { subj: g('ivSubj'), body: g('ivBody') },
     brief: { subj: g('briefSubj'), body: g('briefBody') },
+    confirm: { subj: gN('confirmSubj') || MAIL_NOTIFY_DEF.confirmSubj, body: gN('confirmBody') || MAIL_NOTIFY_DEF.confirmBody },
+    change: { subj: gN('changeSubj') || MAIL_NOTIFY_DEF.changeSubj, body: gN('changeBody') || MAIL_NOTIFY_DEF.changeBody },
     reminders: reminders
   };
+  // 確定/変更通知テンプレ(07_下部・未生成シートでは空→既定文面にフォールバック)
+  function gN(key) { var c = MAIL_NOTIFY_CELLS[key]; try { return String(sh.getRange(c[0], c[1]).getValue() || '').trim(); } catch (e) { return ''; } }
 }
 
 // 差込: {key}を ctx[key] で置換
@@ -5546,7 +6010,9 @@ function fillTemplate_(tmpl, ctx) {
   return String(tmpl || '').replace(/\{(\w+|[^}]+)\}/g, function (m, k) { return (ctx[k] != null) ? String(ctx[k]) : m; });
 }
 // メール送信(実行アカウント・表示名/返信先付き・本文は改行→<br>のHTML)
+// 🔒 MAIL_MASTER_ENABLED=false の間は物理ブロック(ログのみ・falseを返す=送信済記録も付かない→解錠後に自然リトライ)。
 function mailSend_(to, subject, body, cfg) {
+  if (!MAIL_MASTER_ENABLED) { Logger.log('🔒送信ロック中(MAIL_MASTER_ENABLED=false): to=' + to + ' / subj=' + subject); return false; }
   if (!to || !subject) return false;
   var opt = { name: cfg.fromName || companyName_(), htmlBody: String(body || '').replace(/\n/g, '<br>') };
   if (cfg.replyTo) opt.replyTo = cfg.replyTo;
@@ -5762,18 +6228,365 @@ function buildDocsTab_() {
   note_(sh, row + 1, 11, '回収済=リンク有 / 未回収=対象だが未取得（督促要） / 対象外=その区分で不要 or 任意 / 回収予定=選考途中設定で回収ステージ未到達。回収タイミングは 01_設定「必要書類・回収」で区分ごとに設定。リンクを入れると回収日が自動記録。');
 }
 
-/* ============================== ネクストアクション プレースホルダ ============================== */
+/* ============================== 40_選考コックピット（1タブ完結の運用ハブ） ============================== */
+// 「誰に・今日・何をするか」を1タブに集約: NA/期限・調整期限(SLA)・停滞・評価未入力・面接日程の確定/変更通知まで。
+// 正本は常に 10_候補者マスタ / 11_面接スケジュール / 01_設定。コックピットはビュー＋操作台(編集は即時に正本へ流す)。
 
-function reservePlaceholders_() {
-  var map = [
-    [SH.NA, '■ ネクストアクション', '今後実装予定（期限切れSlackリマインド連動）']
-  ];
-  map.forEach(function (x) {
-    var sh = ss_().getSheetByName(x[0]); if (!sh) return;
-    clearSheet_(sh);
-    sh.setColumnWidth(1, 30);
-    for (var c = 2; c <= 9; c++) sh.setColumnWidth(c, 95);
-    bandTitle_(sh, 1, 2, 9, x[1]);
-    sh.getRange(3, 2).setValue(x[2]).setFontColor(C.SUB).setFontSize(11);
+// ステージ別SLA(01_設定 SLAブロック) → { '区分|ステージ名': {adj, stall} }。実行内キャッシュ(docsCacheClear_でリセット)。
+var _slaCache = null;
+function stageSla_() {
+  if (!_slaCache) {
+    _slaCache = {};
+    try {
+      confRead_('SLA').forEach(function (r) {
+        var seg = String(r[0]).trim(), nm = String(r[1]).trim(); if (!seg || !nm) return;
+        var adj = parseInt(r[2], 10), stall = parseInt(r[3], 10);
+        _slaCache[seg + '|' + nm] = { adj: isNaN(adj) ? null : adj, stall: isNaN(stall) ? null : stall };
+      });
+    } catch (e) {}
+  }
+  return _slaCache;
+}
+
+// 現ステージ開始日を本日(東京)でスタンプ。ステージ変更の全経路(マスタ直編集/②/コックピット/自動昇格)から呼ぶ。
+function stampStageStart_(m, row, mH) {
+  if (mH['現ステージ開始日'] == null) return;
+  var n = nowTokyo_();
+  m.getRange(row, mH['現ステージ開始日'] + 1).setValue(d_(n.getUTCFullYear(), n.getUTCMonth() + 1, n.getUTCDate())).setNumberFormat('yyyy-mm-dd');
+}
+
+// 開始日が空の行を推定補完(11_実施済の直近日時 → 直近面接日 → 応募日)。一度埋まれば以後は onEdit スタンプが正。
+function backfillStageStart_() {
+  var m = sheet_(SH.MASTER), md = m.getDataRange().getValues(); if (md.length < 2) return;
+  var mH = headerIndex_(md[0]); if (mH['現ステージ開始日'] == null) return;
+  var lastIv = {};
+  var iv = ss_().getSheetByName(SH.IV);
+  if (iv && iv.getLastRow() >= 2) {
+    var ivd = iv.getDataRange().getValues(), ivH = headerIndex_(ivd.shift());
+    ivd.forEach(function (r) {
+      var cid = String(r[ivH['candidate_id']] || '').trim(); if (!cid) return;
+      if (String(r[ivH['ステータス']]) !== '実施済') return;
+      var dt = r[ivH['予定日時']]; if (!(dt instanceof Date)) return;
+      if (!lastIv[cid] || dt > lastIv[cid]) lastIv[cid] = dt;
+    });
+  }
+  var out = [], touched = false;
+  for (var i = 1; i < md.length; i++) {
+    var cur = md[i][mH['現ステージ開始日']];
+    var cid = String(md[i][mH['candidate_id']] || '').trim();
+    if (cur instanceof Date || !cid) { out.push([cur]); continue; }
+    var guess = lastIv[cid] || md[i][mH['直近面接日']] || md[i][mH['応募日']];
+    if (guess instanceof Date) { out.push([guess]); touched = true; } else out.push(['']);
+  }
+  if (touched) m.getRange(2, mH['現ステージ開始日'] + 1, out.length, 1).setValues(out).setNumberFormat('yyyy-mm-dd');
+}
+
+// アクティブ(進行中/内定)候補者の派生値コレクタ(コックピット/Slack日次で共用)。
+function cockpitData_() {
+  var am = allMaster_(), H = am.H, sla = stageSla_();
+  var today = tokyoDayMs_(nowTokyo_());
+  // 11_の「実施済で評点空」=評価未入力(候補者ごと直近1件)
+  var evalMiss = {};
+  var iv = ss_().getSheetByName(SH.IV);
+  if (iv && iv.getLastRow() >= 2) {
+    var ivd = iv.getDataRange().getValues(), ivH = headerIndex_(ivd.shift());
+    ivd.forEach(function (r) {
+      var cid = String(r[ivH['candidate_id']] || '').trim(); if (!cid) return;
+      if (String(r[ivH['ステータス']]) !== '実施済') return;
+      if (String(r[ivH['評点']] || '').trim() !== '') return;
+      var dt = r[ivH['予定日時']];
+      var cur = evalMiss[cid];
+      if (!cur || (dt instanceof Date && (!(cur.dt instanceof Date) || dt > cur.dt))) {
+        evalMiss[cid] = { dt: dt, stage: String(r[ivH['ステージ']] || ''), who: String(r[ivH['面接官']] || '') };
+      }
+    });
+  }
+  var list = [];
+  am.rows.forEach(function (r) {
+    var status = String(r[H['ステータス']] || '').trim();
+    if (status !== '進行中' && status !== '内定') return;  // アクションが要る母集団のみ
+    var cid = String(r[H['candidate_id']] || '').trim(); if (!cid) return;
+    var seg = String(r[H['区分']] || '').trim(), curStage = String(r[H['現ステージ']] || '').trim();
+    var start = r[H['現ステージ開始日']];
+    var stay = (start instanceof Date) ? Math.max(0, Math.round((today - tokyoDayMs_(start)) / 86400000)) : null;
+    var rule = sla[seg + '|' + curStage] || {};
+    var stalled = (rule.stall != null && stay != null && stay > rule.stall);
+    var nextIv = r[H['次回面接日時']];
+    var due = null, dueDays = null, dueState = '—';
+    if (rule.adj != null && start instanceof Date) {
+      if (nextIv instanceof Date) dueState = '済';  // 次回面接が確定済=調整完了
+      else {
+        due = new Date(tokyoDayMs_(start) + rule.adj * 86400000);
+        dueDays = Math.round((tokyoDayMs_(due) - today) / 86400000);
+        dueState = dueDays < 0 ? ('超過' + (-dueDays) + '日') : (dueDays === 0 ? '本日' : ('残' + dueDays + '日'));
+      }
+    }
+    var na = r[H['NA期限']];
+    var naOver = (status === '進行中' && na instanceof Date && (tokyoDayMs_(na) - today) / 86400000 <= 0);
+    var em = evalMiss[cid] || null;
+    var pr = 0;
+    if (dueDays != null && dueDays < 0) pr = Math.max(pr, 100 - dueDays);                     // 調整期限 超過
+    if (naOver) pr = Math.max(pr, 90);                                                        // NA期限 本日/超過
+    if (em) pr = Math.max(pr, 70);                                                            // 評価未入力
+    if (dueDays === 0) pr = Math.max(pr, 60);                                                 // 調整期限 本日
+    if (stalled && stay != null && rule.stall != null) pr = Math.max(pr, 40 + (stay - rule.stall));  // 停滞
+    if (dueDays != null && dueDays > 0) pr = Math.max(pr, Math.max(1, 30 - dueDays));         // 期限が近い順
+    list.push({
+      cid: cid, name: String(r[H['氏名']] || ''), seg: seg, curStage: curStage, status: status,
+      stay: stay, stalled: stalled, due: due, dueDays: dueDays, dueState: dueState,
+      nextIv: (nextIv instanceof Date) ? nextIv : null, evalMiss: em,
+      na: String(r[H['ネクストアクション']] || ''), naDue: (na instanceof Date) ? na : null, naOver: naOver,
+      rc: String(r[H['採用担当RC']] || ''), pr: pr
+    });
+  });
+  list.sort(function (a, b) { return b.pr - a.pr || (a.due && b.due ? a.due - b.due : 0); });
+  return { list: list, H: H };
+}
+
+// 40_選考コックピット生成(refreshAll/setupAll経由)。OWN列は候補者IDで退避=再描画に耐える。
+function buildCockpit_() {
+  var ss = ss_();
+  // 旧プレースホルダ名からのリネーム移行(タブ位置・参照を保ったまま)
+  var legacy = ss.getSheetByName('40_ネクストアクション');
+  if (legacy && !ss.getSheetByName(SH.NA)) { try { legacy.setName(SH.NA); } catch (e) {} }
+  var existed = !!ss.getSheetByName(SH.NA);
+  var sh = sheet_(SH.NA);
+  var cols = COCKPIT_COLS, w = cols.length;
+  function colIdx(cn) { return cols.indexOf(cn); }
+  // OWN列を候補者IDで退避(通知送信☑は退避しない=再描画で常にfalse・誤発火防止)
+  var keep = {};
+  if (existed && sh.getLastRow() >= 3 && sh.getLastColumn() >= 3) {
+    var od = sh.getRange(2, 2, sh.getLastRow() - 1, sh.getLastColumn() - 1).getValues();
+    var oH = {}; (od[0] || []).forEach(function (h, i) { oH[String(h)] = i; });
+    for (var i = 1; i < od.length; i++) {
+      var c0 = String((oH['候補者ID'] != null ? od[i][oH['候補者ID']] : '') || '').trim(); if (!c0) continue;
+      keep[c0] = {};
+      COCKPIT_OWN_COLS.forEach(function (cn) { if (cn !== '通知送信' && oH[cn] != null) keep[c0][cn] = od[i][oH[cn]]; });
+    }
+  }
+  var data = cockpitData_();
+  var body = data.list.map(function (x) {
+    var kp = keep[x.cid] || {};
+    return cols.map(function (cn) {
+      switch (cn) {
+        case '候補者ID': return x.cid;
+        case '氏名': return x.name;
+        case '区分': return x.seg;
+        case '現ステージ': return x.curStage;
+        case 'ステータス': return x.status;
+        case '滞在日数': return (x.stay != null) ? x.stay : '';
+        case '停滞': return x.stalled ? '⚠停滞' : '';
+        case '調整期限': return x.due || '';
+        case '期限状態': return x.dueState;
+        case '次回面接日時': return x.nextIv || '';
+        case '評価未入力': return x.evalMiss ? ('未（' + x.evalMiss.stage + '）') : '';
+        case '優先度': return x.pr;
+        case 'ネクストアクション': return x.na;
+        case 'NA期限': return x.naDue || '';
+        case '採用担当RC': return x.rc;
+        case '通知送信': return false;
+        default: return (kp[cn] != null) ? kp[cn] : '';
+      }
+    });
+  });
+  clearSheet_(sh);
+  var N = Math.max(body.length + 30, 60);
+  ensureGrid_(sh, N + 3, w + 1);
+  bandTitle_(sh, 1, 2, w + 1, '■ ' + companyName_() + '　選考コックピット（優先度順・NA/調整期限/面接確定を1タブで運用）');
+  sh.getRange(2, 2, 1, w).setValues([cols]).setBackground(HEAD_BG).setFontColor(C.INK).setFontWeight('bold').setFontSize(9).setHorizontalAlignment('center');
+  var dataTop = 3;
+  if (body.length) sh.getRange(dataTop, 2, body.length, w).setValues(body).setFontSize(10).setVerticalAlignment('middle').setWrap(true);
+  var bgs = []; for (var z = 0; z < N; z++) { var line = []; for (var xw = 0; xw < w; xw++) line.push(z % 2 ? C.ZEBRA : C.WHITE); bgs.push(line); }
+  sh.getRange(dataTop, 2, N, w).setBackgrounds(bgs);
+  COCKPIT_AUTO_COLS.forEach(function (cn) { var i = colIdx(cn); if (i >= 0) sh.getRange(dataTop, 2 + i, N, 1).setBackground(DESIGN_AUTO_BG); });
+  COCKPIT_SYNC_COLS.concat(COCKPIT_OWN_COLS).forEach(function (cn) { var i = colIdx(cn); if (i >= 0) sh.getRange(dataTop, 2 + i, N, 1).setBackground(DESIGN_INPUT_BG); });
+  // 日付書式
+  [['調整期限', 'yyyy/mm/dd'], ['NA期限', 'yyyy/mm/dd'], ['次回面接日時', 'yyyy/mm/dd hh:mm'], ['確定日時', 'yyyy/mm/dd hh:mm'], ['通知日時', 'yyyy/mm/dd hh:mm']].forEach(function (p) {
+    var i = colIdx(p[0]); if (i >= 0) sh.getRange(dataTop, 2 + i, N, 1).setNumberFormat(p[1]);
+  });
+  // 入力規則
+  var conf = sheet_(SH.CONF);
+  function setList(cn, list) { var i = colIdx(cn); if (i >= 0 && list && list.length) sh.getRange(dataTop, 2 + i, N, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(list, true).setAllowInvalid(true).build()); }
+  function setRange(cn, rng) { var i = colIdx(cn); if (i >= 0) sh.getRange(dataTop, 2 + i, N, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInRange(rng, true).setAllowInvalid(true).build()); }
+  var stageList = [];
+  try { enabledSegments_().forEach(function (s) { segStages_(s).forEach(function (st) { var nm = String(st.name || '').trim(); if (nm && stageList.indexOf(nm) < 0) stageList.push(nm); }); }); } catch (e) {}
+  setList('現ステージ', stageList);
+  setList('ステータス', STATUSES);
+  setList('形式', IV_FORMAT);
+  setRange('採用担当RC', confSrc_(conf, 'MEMBER', 0));
+  setRange('面接官', confSrc_(conf, 'MEMBER', 0));
+  setRange('確定ステージ', confSrc_(conf, 'STAGE', 2));
+  var ck = colIdx('通知送信'); if (ck >= 0) sh.getRange(dataTop, 2 + ck, N, 1).insertCheckboxes();
+  // 条件付き書式(セル値追従=再描画不要): 期限状態 超過=赤/本日=橙・停滞⚠=橙・評価未入力=橙・NA期限過去は日次Slackで補足
+  var rules = [];
+  var iDue = colIdx('期限状態'), iStall = colIdx('停滞'), iEval = colIdx('評価未入力');
+  if (iDue >= 0) {
+    var rDue = sh.getRange(dataTop, 2 + iDue, N, 1);
+    rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('超過').setBackground('#F8D7DA').setFontColor(C.RED).setBold(true).setRanges([rDue]).build());
+    rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo('本日').setBackground('#FCEFE6').setFontColor('#B45309').setBold(true).setRanges([rDue]).build());
+  }
+  if (iStall >= 0) rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('⚠').setBackground('#FCEFE6').setFontColor('#B45309').setRanges([sh.getRange(dataTop, 2 + iStall, N, 1)]).build());
+  if (iEval >= 0) rules.push(SpreadsheetApp.newConditionalFormatRule().whenTextStartsWith('未').setBackground('#FCEFE6').setFontColor('#B45309').setRanges([sh.getRange(dataTop, 2 + iEval, N, 1)]).build());
+  sh.setConditionalFormatRules(rules);
+  sh.getRange(2, 2, N + 1, w).setBorder(true, true, true, true, true, true, C.BORDER, SpreadsheetApp.BorderStyle.SOLID);
+  sh.setColumnWidth(1, 28);
+  var CW = { '候補者ID': 100, '氏名': 96, '区分': 60, '現ステージ': 100, 'ステータス': 70, '滞在日数': 64, '停滞': 64,
+    '調整期限': 90, '期限状態': 76, '次回面接日時': 120, '評価未入力': 110, '優先度': 56, 'ネクストアクション': 200,
+    'NA期限': 90, '採用担当RC': 90, '確定ステージ': 110, '確定日時': 130, '面接官': 96, '形式': 76, 'URL・場所': 160,
+    '通知送信': 64, '通知状態': 110, '通知日時': 120 };
+  for (var ci = 0; ci < w; ci++) sh.setColumnWidth(2 + ci, CW[cols[ci]] || 96);
+  try { sh.setFrozenRows(2); sh.setFrozenColumns(3); } catch (e2) {}
+  note_(sh, dataTop + N + 1, w, '進行中/内定の候補者を優先度順に表示（優先度=調整期限超過＞NA超過＞評価未入力＞本日＞停滞）。グレー=自動。ピンクのうち「' + COCKPIT_SYNC_COLS.join('・') + '」はマスタへ自動同期＝正本はマスタ。面接調整=「確定ステージ・確定日時（必要ならURL/面接官/形式）」を入れて通知送信に☑ → 確定/変更を自動判定し11_面接スケジュールへ即反映＋リマインド再設定。⚠️通知メールの実送信は権限の都合で☑では出ないことがあるため、メニュー「採用 ▸ 面接を確定＆通知」でまとめて送るのが確実（☑分は「要送信」として残ります）。' + (MAIL_MASTER_ENABLED ? '' : '（🔒現在は送信ロック中＝シート反映のみ・メールは1通も送信されません）'));
+  return body.length;
+}
+function refreshCockpit() { buildCockpit_(); toast_('選考コックピットを更新しました'); }
+
+// コックピットの編集ハンドラ(onEditから)。SYNC列→マスタ書き戻し / 通知送信☑→確定処理。
+function cockpitEdit_(e, sh) {
+  var lc = sh.getLastColumn(); if (lc < 2) return;
+  var hdr = sh.getRange(2, 1, 1, lc).getValues()[0];
+  var oH = {}; hdr.forEach(function (h, i) { oH[String(h)] = i + 1; });  // 1-based col
+  var col = e.range.getColumn(), row = e.range.getRow(); if (row < 3) return;
+  var label = null; for (var k in oH) { if (oH[k] === col) { label = k; break; } }
+  if (!label) return;
+  if (label === '通知送信') {
+    if (String(e.value).toUpperCase() !== 'TRUE') return;
+    e.range.setValue(false);  // 自己リセット(setValueは簡易onEditを再発火しない)
+    cockpitConfirmRow_(sh, row, oH, {});
+    try { syncNextInterview(); } catch (e2) {}
+    return;
+  }
+  if (COCKPIT_SYNC_COLS.indexOf(label) < 0) return;
+  if (oH['候補者ID'] == null) return;
+  var cid = String(sh.getRange(row, oH['候補者ID']).getValue() || '').trim(); if (!cid) return;
+  var m = sheet_(SH.MASTER), md = m.getDataRange().getValues(), mH = headerIndex_(md[0]);
+  if (mH[label] == null || mH['candidate_id'] == null) return;
+  var target = -1; for (var i = 1; i < md.length; i++) { if (String(md[i][mH['candidate_id']]).trim() === cid) { target = i; break; } }
+  if (target < 0) return;
+  var val = e.range.getValue();
+  if (COCKPIT_DATE_COLS[label]) { var d = parseDateLoose_(val); m.getRange(target + 1, mH[label] + 1).setValue(d || ''); }
+  else m.getRange(target + 1, mH[label] + 1).setValue(val == null ? '' : val);
+  if (label === '現ステージ') { try { stampStageStart_(m, target + 1, mH); } catch (e3) {} }
+}
+
+// 11_面接スケジュールへ upsert(候補者×ステージの 予定/調整中 行を更新・無ければ採番追記)。
+function upsertInterview_(info) {
+  var iv = sheet_(SH.IV), ivd = iv.getDataRange().getValues(), ivH = headerIndex_(ivd[0]);
+  var found = -1, oldDt = null;
+  for (var i = 1; i < ivd.length; i++) {
+    if (String(ivd[i][ivH['candidate_id']] || '').trim() !== info.cid) continue;
+    if (String(ivd[i][ivH['ステージ']] || '').trim() !== info.stage) continue;
+    var st = String(ivd[i][ivH['ステータス']] || '');
+    if (st !== '予定' && st !== '調整中') continue;
+    found = i; oldDt = ivd[i][ivH['予定日時']]; break;
+  }
+  if (found >= 0) {
+    var ivId = String(ivd[found][ivH['interview_id']] || ('row' + found));
+    iv.getRange(found + 1, ivH['予定日時'] + 1).setValue(info.dt);
+    if (info.url) iv.getRange(found + 1, ivH['面接URL'] + 1).setValue(info.url);
+    if (info.who) iv.getRange(found + 1, ivH['面接官'] + 1).setValue(info.who);
+    if (info.format) iv.getRange(found + 1, ivH['形式'] + 1).setValue(info.format);
+    iv.getRange(found + 1, ivH['ステータス'] + 1).setValue('予定');
+    return { id: ivId, existed: true, oldDt: (oldDt instanceof Date) ? oldDt : null };
+  }
+  var arr = new Array(IV_COLS.length); for (var k = 0; k < arr.length; k++) arr[k] = '';
+  var newId = nextInterviewId_(iv, ivH);
+  arr[ivH['interview_id']] = newId; arr[ivH['candidate_id']] = info.cid; arr[ivH['候補者名']] = info.name;
+  arr[ivH['区分']] = info.seg; arr[ivH['職種']] = info.job; arr[ivH['ステージ']] = info.stage;
+  arr[ivH['予定日時']] = info.dt; arr[ivH['面接URL']] = info.url || ''; arr[ivH['面接官']] = info.who || '';
+  arr[ivH['形式']] = info.format || 'オンライン'; arr[ivH['ステータス']] = '予定';
+  iv.getRange(iv.getLastRow() + 1, 1, 1, arr.length).setValues([arr]);
+  return { id: newId, existed: false, oldDt: null };
+}
+
+// コックピット1行の面接確定処理: 確定/変更を自動判定 → 通知メール → 11_upsert → リマインドログreset → 状態記録。
+// opts.dry=true はシートにもメールにも触れずログのみ(ドライラン)。
+function cockpitConfirmRow_(sh, row, oH, opts) {
+  opts = opts || {};
+  function gv(cn) { return (oH[cn] != null) ? sh.getRange(row, oH[cn]).getValue() : ''; }
+  function setState(txt, when) {
+    if (opts.dry) return;
+    if (oH['通知状態'] != null) sh.getRange(row, oH['通知状態']).setValue(txt);
+    if (oH['通知日時'] != null && when) sh.getRange(row, oH['通知日時']).setValue(when);
+  }
+  var cid = String(gv('候補者ID') || '').trim();
+  var stage = String(gv('確定ステージ') || '').trim();
+  var dtRaw = gv('確定日時');
+  var dt = (dtRaw instanceof Date) ? dtRaw : parseBriefDateTime_(dtRaw);
+  if (!cid || !stage || !dt) { if (!opts.dry) setState('入力不足(ID/確定ステージ/確定日時)', null); return { skipped: true, reason: '入力不足' }; }
+  var m = sheet_(SH.MASTER), md = m.getDataRange().getValues(), mH = headerIndex_(md[0]);
+  var name = '', seg = '', job = '', to = '';
+  for (var i = 1; i < md.length; i++) {
+    if (String(md[i][mH['candidate_id']]).trim() === cid) {
+      name = String(md[i][mH['氏名']] || ''); seg = String(md[i][mH['区分']] || ''); job = String(md[i][mH['職種']] || '');
+      to = String(md[i][mH['連絡先']] || '').trim(); break;
+    }
+  }
+  if (!name) { setState('候補者IDがマスタに無い', null); return { skipped: true, reason: 'ID不明' }; }
+  var who = String(gv('面接官') || '').trim(), format = String(gv('形式') || '').trim() || 'オンライン';
+  var url = String(gv('URL・場所') || '').trim();
+  if (opts.dry) {
+    Logger.log('[確定ドライラン] ' + name + ' / ' + stage + ' / ' + fmtDT_(dt) + ' / ' + (to || 'メール無し'));
+    return { dry: true, name: name, stage: stage, dt: dt };
+  }
+  // 11_へ反映(確定/変更の自動判定)
+  var up = upsertInterview_({ cid: cid, name: name, seg: seg, job: job, stage: stage, dt: dt, url: url, who: who, format: format });
+  var changed = up.existed && up.oldDt && Math.abs(up.oldDt.getTime() - dt.getTime()) >= 60000;
+  var same = up.existed && up.oldDt && !changed;
+  // 日時変更 → mailRemindLog の該当面接をリセット(新日程でN日前リマインドが再送される)
+  if (changed) {
+    try {
+      var props = PropertiesService.getDocumentProperties();
+      var log = {}; try { log = JSON.parse(props.getProperty('mailRemindLog') || '{}'); } catch (e) {}
+      if (log[up.id]) { delete log[up.id]; props.setProperty('mailRemindLog', JSON.stringify(log)); }
+    } catch (e2) { Logger.log('remindLog reset 失敗: ' + e2); }
+  }
+  if (same) { setState('反映済(日時変更なし・通知不要)', nowTokyo_()); return { ok: true, notified: false }; }
+  // 通知メール(確定 or 変更)。送信ロック中/失敗はシート反映のみで状態に明示。
+  var kind = changed ? '変更' : '確定';
+  var sentState = '';
+  if (!validEmail_(to)) sentState = '反映済(メールアドレス無し)';
+  else {
+    var cfg = mailConfig_();
+    var tpl = changed ? cfg.change : cfg.confirm;
+    var ctx = { 氏名: name, 区分: seg, 職種: job, ステージ: stage, 日時: fmtDT_(dt), 形式: format, 面接官: who, URL: url || '追ってご連絡します', 会社名: companyName_() };
+    var sent = false;
+    try { sent = mailSend_(to, fillTemplate_(tpl.subj, ctx), fillTemplate_(tpl.body, ctx), cfg); }
+    catch (e3) { Logger.log('確定通知 送信例外(onEdit簡易トリガーの権限制約の可能性): ' + e3); sent = false; }
+    sentState = sent ? ('送信済(' + kind + ')') : (MAIL_MASTER_ENABLED ? ('要送信(' + kind + ')→メニュー「面接を確定＆通知」') : ('反映済(' + kind + '・🔒未送信)'));
+  }
+  setState(sentState, nowTokyo_());
+  return { ok: true, notified: sentState.indexOf('送信済') === 0, kind: kind };
+}
+
+// コックピット全行の確定処理(メニュー)。対象=通知送信☑ or 通知状態「要送信」。
+function cockpitConfirmAll_(opts) {
+  opts = opts || {};
+  var sh = ss_().getSheetByName(SH.NA); if (!sh || sh.getLastRow() < 3) { toast_('選考コックピットにデータがありません'); return; }
+  if (!opts.dry && !requireCompany_('面接確定通知')) return;
+  var lc = sh.getLastColumn(), hdr = sh.getRange(2, 1, 1, lc).getValues()[0];
+  var oH = {}; hdr.forEach(function (h, i) { oH[String(h)] = i + 1; });
+  if (oH['通知送信'] == null || oH['候補者ID'] == null) { toast_('コックピットを更新してから実行してください'); return; }
+  var last = sh.getLastRow(), n = 0, sent = 0;
+  for (var r = 3; r <= last; r++) {
+    var flag = sh.getRange(r, oH['通知送信']).getValue() === true;
+    var state = String(oH['通知状態'] != null ? sh.getRange(r, oH['通知状態']).getValue() : '');
+    if (!flag && state.indexOf('要送信') !== 0) continue;
+    if (!opts.dry && flag) sh.getRange(r, oH['通知送信']).setValue(false);
+    var res = cockpitConfirmRow_(sh, r, oH, opts);
+    if (res && !res.skipped) { n++; if (res.notified) sent++; }
+  }
+  if (!opts.dry) { try { syncNextInterview(); } catch (e) {} }
+  toast_(opts.dry ? ('確定ドライラン: 対象' + n + '件(ログ参照・送信/反映なし)') : ('面接確定: ' + n + '件反映 / 通知' + sent + '件送信' + (MAIL_MASTER_ENABLED ? '' : '（🔒送信ロック中）')));
+}
+function cockpitConfirmNow() { cockpitConfirmAll_({}); }
+function cockpitConfirmDry() { cockpitConfirmAll_({ dry: true }); }
+
+// 09_CSV取込の設定駆動表示: エントリー方式がATS-CSV以外なら取込タブを隠す(スプレッドシート管理の企業ではCSV UIを出さない)。
+function applyCsvVisibility_() {
+  var atsOn = entryMethod_() === 'ATS-CSV取込';
+  [SH.CSV, '09_取込元データ'].forEach(function (nm) {
+    var t = ss_().getSheetByName(nm); if (!t) return;
+    try { if (atsOn) t.showSheet(); else t.hideSheet(); } catch (e) {}
   });
 }
